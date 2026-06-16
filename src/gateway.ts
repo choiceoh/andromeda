@@ -85,11 +85,28 @@ export async function chatStream(
   message: string,
   handlers: ChatHandlers,
   sessionKey = "client:main",
+  workspaceContext?: string,
 ): Promise<void> {
+  // Inject the current work-area content as a USER-message prefix (never system),
+  // so Deneb's AI can read what you're working on.
+  //
+  // This is SEMANTIC TEXT, not a screenshot — the work area serializes itself to
+  // text (a markdown doc, mail header+body, a data grid as a table, a chart's
+  // underlying numbers). So ANY LLM reads it with no vision model needed: more
+  // accurate (no pixel guessing), cheaper (no vision tokens), and cache-friendly.
+  // Vision stays a last resort for true images / scanned PDFs (Deneb's
+  // capture.image + OCR path). In Phase 1 each pane exposes serializeForAI().
+  //
+  // User-turn placement keeps the gateway's vLLM prefix cache (APC) intact —
+  // per-turn context belongs in the trailing user message, not the cached system
+  // prompt (see Deneb prompt-cache §1.5).
+  const composed = workspaceContext?.trim()
+    ? `[작업 영역 — 현재 내용]\n${workspaceContext}\n\n[요청]\n${message}`
+    : message;
   const res = await fetch(`${base(cfg.url)}/api/v1/miniapp/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", [TOKEN_HEADER]: cfg.token },
-    body: JSON.stringify({ message, sessionKey }),
+    body: JSON.stringify({ message: composed, sessionKey }),
   });
   if (!res.ok) throw new Error(`chat stream: HTTP ${res.status}`);
   if (!res.body) throw new Error("chat stream: empty response body");
