@@ -29,6 +29,25 @@ function mapFor(resource: string): ResourceMap {
   return m;
 }
 
+// RPC list responses vary in shape: some return a bare array, most wrap it
+//   todo.list         -> { todos: [...] }
+//   gmail.list_recent -> { messages: [...], nextPageToken }
+//   calendar.list_*   -> [ ... ]
+// Pull the array out regardless. (Found via runtime check — typecheck can't see
+// the wire shape, so this is exactly what the live gateway run caught.)
+function extractRows(payload: unknown): Record<string, unknown>[] {
+  if (Array.isArray(payload)) return payload as Record<string, unknown>[];
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    for (const k of ["todos", "items", "data", "messages", "events", "rows", "results"]) {
+      if (Array.isArray(obj[k])) return obj[k] as Record<string, unknown>[];
+    }
+    const firstArray = Object.values(obj).find((v) => Array.isArray(v));
+    if (firstArray) return firstArray as Record<string, unknown>[];
+  }
+  return [];
+}
+
 // Deneb-backed Refine data provider. RPC payloads are dynamic, so the provider
 // works in `any` at this boundary and Refine re-applies the caller's TData on the
 // way out (its CRUD methods are generic over caller-supplied TData).
@@ -37,16 +56,16 @@ export function denebDataProvider(cfg: GatewayConfig): DataProvider {
     getApiUrl: () => cfg.url,
 
     getList: async ({ resource }) => {
-      const rows = await callRpc<any[]>(cfg, mapFor(resource).list, {});
-      const data = Array.isArray(rows) ? rows : [];
-      return { data, total: data.length };
+      const payload = await callRpc<unknown>(cfg, mapFor(resource).list, {});
+      const data = extractRows(payload);
+      return { data: data as never[], total: data.length };
     },
 
     getOne: async ({ resource, id }) => {
       // todo has no dedicated "get" — read the list and find. mail/calendar add getOne later.
-      const rows = await callRpc<any[]>(cfg, mapFor(resource).list, {});
-      const found = (rows ?? []).find((r) => String(r.id) === String(id));
-      return { data: found ?? { id } };
+      const payload = await callRpc<unknown>(cfg, mapFor(resource).list, {});
+      const found = extractRows(payload).find((r) => String(r.id) === String(id));
+      return { data: (found ?? { id }) as never };
     },
 
     create: async ({ resource, variables }) => {
