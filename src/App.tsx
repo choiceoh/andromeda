@@ -26,8 +26,9 @@ interface CalEvent {
   id: string | number;
   title?: string;
   summary?: string;
-  start?: string;
-  end?: string;
+  // Google Calendar-shaped events nest the timestamp as { dateTime } or { date }.
+  start?: string | { dateTime?: string; date?: string };
+  end?: string | { dateTime?: string; date?: string };
   location?: string;
 }
 
@@ -52,6 +53,26 @@ function fmtDate(v?: string): string {
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return v;
   return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+// Calendar timestamps arrive as a bare string or a { dateTime } / { date } object
+// (all-day events) — pull out the string form for fmtDate.
+function dateValue(v: unknown): string | undefined {
+  if (typeof v === "string") return v;
+  if (v && typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    const s = o.dateTime ?? o.date;
+    return typeof s === "string" ? s : undefined;
+  }
+  return undefined;
+}
+
+// Best-effort message from a Refine/HttpError (a plain object with `message`) or any throwable.
+function errText(e: unknown): string {
+  if (!e) return "알 수 없는 오류";
+  if (typeof e === "string") return e;
+  if (typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
+  return String(e);
 }
 
 // App owns the gateway config and wraps everything in <Refine> with the Deneb
@@ -174,7 +195,7 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
             ? `[일정 ${events.length}건]\n` +
                 events
                   .map((ev) => {
-                    const span = [fmtDate(ev.start), fmtDate(ev.end)].filter(Boolean).join("~");
+                    const span = [fmtDate(dateValue(ev.start)), fmtDate(dateValue(ev.end))].filter(Boolean).join("~");
                     return `- ${ev.title ?? ev.summary ?? "(제목 없음)"}${span ? ` (${span})` : ""}${
                       ev.location ? ` @${ev.location}` : ""
                     }`;
@@ -252,10 +273,16 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
   const th: React.CSSProperties = { padding: "6px 8px" };
   const td: React.CSSProperties = { padding: "6px 8px" };
 
-  // Shared empty/loading/disconnected notice for a grid; null means "show the table".
-  function gridNotice(loading: boolean, count: number, empty: string): React.ReactNode {
+  // Shared disconnected/error/loading/empty notice for a grid; null means "show the
+  // table". Error is checked BEFORE empty so a failed RPC isn't shown as "no data".
+  function gridNotice(
+    q: { isLoading: boolean; isError?: boolean; error?: unknown },
+    count: number,
+    empty: string,
+  ): React.ReactNode {
     if (!connected) return <p style={muted}>게이트웨이에 연결하면 표시됩니다 (좌측 하단).</p>;
-    if (loading) return <p style={muted}>불러오는 중…</p>;
+    if (q.isError) return <p style={{ ...muted, color: "#e0a0a0" }}>불러오기 실패: {errText(q.error)}</p>;
+    if (q.isLoading) return <p style={muted}>불러오는 중…</p>;
     if (count === 0) return <p style={muted}>{empty}</p>;
     return null;
   }
@@ -300,7 +327,7 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
                 onKeyDown={(e) => { if (e.key === "Enter") addTodo(); }} />
               <button onClick={addTodo} style={{ padding: "8px 14px" }}>추가</button>
             </div>
-            {gridNotice(query.isLoading, todos.length, "할일이 없습니다.") ?? (
+            {gridNotice(query, todos.length, "할일이 없습니다.") ?? (
               <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 680 }}>
                 <thead>
                   <tr style={{ textAlign: "left", opacity: 0.6, fontSize: 13 }}>
@@ -349,7 +376,7 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
         {view === "mail" && (
           <>
             <h2 style={{ marginTop: 2 }}>메일</h2>
-            {gridNotice(mailQuery.isLoading, mails.length, "메일이 없습니다.") ?? (
+            {gridNotice(mailQuery, mails.length, "메일이 없습니다.") ?? (
               <table style={{ borderCollapse: "collapse", width: "100%" }}>
                 <thead>
                   <tr style={{ textAlign: "left", opacity: 0.6, fontSize: 13 }}>
@@ -384,7 +411,7 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
         {view === "calendar" && (
           <>
             <h2 style={{ marginTop: 2 }}>일정</h2>
-            {gridNotice(calQuery.isLoading, events.length, "다가오는 일정이 없습니다.") ?? (
+            {gridNotice(calQuery, events.length, "다가오는 일정이 없습니다.") ?? (
               <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 760 }}>
                 <thead>
                   <tr style={{ textAlign: "left", opacity: 0.6, fontSize: 13 }}>
@@ -395,7 +422,7 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
                 </thead>
                 <tbody>
                   {events.map((ev) => {
-                    const span = [fmtDate(ev.start), fmtDate(ev.end)].filter(Boolean).join(" ~ ");
+                    const span = [fmtDate(dateValue(ev.start)), fmtDate(dateValue(ev.end))].filter(Boolean).join(" ~ ");
                     return (
                       <tr key={String(ev.id)} style={{ borderTop: line }}>
                         <td style={{ ...td, fontSize: 13, opacity: 0.8, whiteSpace: "nowrap" }}>{span || "—"}</td>
