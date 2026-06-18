@@ -1,5 +1,8 @@
-# esbuild ships a prebuilt platform binary; approve its install script so pnpm
-# builds it instead of leaving it "ignored".
+# This pnpm distribution gates package build scripts via a supply-chain policy and
+# fails install until each is explicitly approved here. esbuild ships a prebuilt
+# platform binary (used by vite + vitest), so approve it.
+allowBuilds:
+  esbuild: true
 onlyBuiltDependencies:
   - esbuild
 # CI installs deps explicitly, so skip pnpm's per-run deps re-verification.
