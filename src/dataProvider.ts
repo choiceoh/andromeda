@@ -5,10 +5,11 @@ import { type GatewayConfig, callRpc } from "./gateway";
 // end is already well-structured, it plugs straight into Refine's data-provider
 // contract — resources flow into grids/forms with no per-screen glue.
 //
-// Phase 1: todo (simplest CRUD). Next: mail (gmail.*), calendar (calendar.*),
-// memory/wiki (memory.*).
+// Phase 1: todo, mail (gmail.*), calendar (calendar.*) — the workstation MVP's
+// three grids. Next (Phase 2): memory/wiki (memory.*), unified search.
 interface ResourceMap {
   list: string;
+  get?: string; // dedicated single-record read (else getOne falls back to list+find)
   create?: string;
   update?: string;
   remove?: string;
@@ -20,6 +21,20 @@ const RESOURCES: Record<string, ResourceMap> = {
     create: "miniapp.todo.create",
     update: "miniapp.todo.update",
     remove: "miniapp.todo.delete",
+  },
+  // Mail is read-mostly here; archive/trash/analyze are dedicated AI-driven
+  // actions rather than generic CRUD, so the grid only wires list + get + trash.
+  mail: {
+    list: "miniapp.gmail.list_recent",
+    get: "miniapp.gmail.get",
+    remove: "miniapp.gmail.trash",
+  },
+  calendar: {
+    list: "miniapp.calendar.list_upcoming",
+    get: "miniapp.calendar.get",
+    create: "miniapp.calendar.create",
+    update: "miniapp.calendar.update",
+    remove: "miniapp.calendar.delete",
   },
 };
 
@@ -43,8 +58,13 @@ export function denebDataProvider(cfg: GatewayConfig): DataProvider {
     },
 
     getOne: async ({ resource, id }) => {
-      // todo has no dedicated "get" — read the list and find. mail/calendar add getOne later.
-      const rows = await callRpc<any[]>(cfg, mapFor(resource).list, {});
+      const m = mapFor(resource);
+      // mail/calendar expose a dedicated get; todo has none, so fall back to list+find.
+      if (m.get) {
+        const data = await callRpc<any>(cfg, m.get, { id });
+        return { data: data ?? { id } };
+      }
+      const rows = await callRpc<any[]>(cfg, m.list, {});
       const found = (rows ?? []).find((r) => String(r.id) === String(id));
       return { data: found ?? { id } };
     },
