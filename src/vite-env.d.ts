@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly MODE?: string;
   readonly VITE_MOCK?: string;
   readonly VITE_LOG_LEVEL?: string;
+  readonly VITE_GATEWAY_URL?: string;
+  readonly VITE_GATEWAY_TOKEN?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;
