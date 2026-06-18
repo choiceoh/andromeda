@@ -5,6 +5,7 @@
 // EventSource can't set the X-Deneb-Client-Token header, so we read the SSE stream
 // off fetch() with an AbortSignal (same approach as chatStream).
 import { type GatewayConfig, TOKEN_HEADER, base } from "./gateway";
+import { readSSE } from "./sse";
 import { log } from "./log";
 
 const evLog = log.child("events");
@@ -57,34 +58,14 @@ export async function subscribeEvents(
   evLog.info("stream open");
   handlers.onOpen?.();
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let event = "";
-
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? ""; // keep trailing partial line
-    for (const line of lines) {
-      if (line.startsWith("event:")) {
-        event = line.slice(6).trim();
-        continue;
-      }
-      if (!line.startsWith("data:")) continue;
-      const data = line.slice(5).trim();
-      if (!data) continue;
-      try {
-        const obj = JSON.parse(data) as Record<string, unknown>;
-        const ev = toEvent(event, obj);
-        evLog.debug(`event ${ev.kind ?? "?"}`, ev.title ?? "");
-        handlers.onEvent?.(ev);
-      } catch {
-        /* ignore malformed frame */
-      }
-      event = "";
+  await readSSE(res.body, ({ event, data }) => {
+    try {
+      const obj = JSON.parse(data) as Record<string, unknown>;
+      const ev = toEvent(event, obj);
+      evLog.debug(`event ${ev.kind ?? "?"}`, ev.title ?? "");
+      handlers.onEvent?.(ev);
+    } catch {
+      /* ignore malformed frame */
     }
-  }
+  });
 }

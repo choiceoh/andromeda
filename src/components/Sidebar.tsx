@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { type GatewayConfig, saveConfig } from "../gateway";
-import { useGatewayStatus } from "../hooks";
-import { color, field, kbd, line, navButton, pane } from "../theme";
-import { useWorkspace } from "../workspaceContext";
+import { type GatewayConfig, saveConfig } from "@/gateway";
+import { useGatewayStatus } from "@/hooks";
+import { color, field, kbd, line, navButton, pane } from "@/theme";
+import { useWorkspace } from "@/workspaceContext";
 import { PANES } from "./panes";
 
 // Left column: registry-driven navigation + the gateway connection form.

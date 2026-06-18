@@ -3,6 +3,7 @@
 // Phase 0 (this file): raw RPC envelope + token auth + ping + chat SSE stream.
 // Phase 1: wrap callRpc() in a Refine data provider so resources (mail, calendar,
 // todo, memory …) flow into grids/forms automatically.
+import { readSSE } from "./sse";
 import { log } from "./log";
 
 const rpcLog = log.child("rpc");
@@ -122,50 +123,31 @@ export async function chatStream(
   }
   if (!res.body) throw new Error("chat stream: empty response body");
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let event = "";
-
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? ""; // keep the trailing partial line
-    for (const line of lines) {
-      if (line.startsWith("event:")) {
-        event = line.slice(6).trim();
-        continue;
+  await readSSE(res.body, ({ event, data }) => {
+    try {
+      const obj = JSON.parse(data) as Record<string, unknown>;
+      switch (event) {
+        case "delta":
+          if (typeof obj.delta === "string") handlers.onDelta?.(obj.delta);
+          break;
+        case "tool":
+          handlers.onTool?.(obj);
+          break;
+        case "thinking":
+          if (typeof obj.preview === "string") handlers.onThinking?.(obj.preview);
+          break;
+        case "done":
+          handlers.onDone?.({
+            text: typeof obj.text === "string" ? obj.text : "",
+            model: typeof obj.model === "string" ? obj.model : undefined,
+          });
+          break;
+        case "error":
+          handlers.onError?.(typeof obj.error === "string" ? obj.error : "unknown error");
+          break;
       }
-      if (!line.startsWith("data:")) continue;
-      const data = line.slice(5).trim();
-      if (!data) continue;
-      try {
-        const obj = JSON.parse(data) as Record<string, unknown>;
-        switch (event) {
-          case "delta":
-            if (typeof obj.delta === "string") handlers.onDelta?.(obj.delta);
-            break;
-          case "tool":
-            handlers.onTool?.(obj);
-            break;
-          case "thinking":
-            if (typeof obj.preview === "string") handlers.onThinking?.(obj.preview);
-            break;
-          case "done":
-            handlers.onDone?.({
-              text: typeof obj.text === "string" ? obj.text : "",
-              model: typeof obj.model === "string" ? obj.model : undefined,
-            });
-            break;
-          case "error":
-            handlers.onError?.(typeof obj.error === "string" ? obj.error : "unknown error");
-            break;
-        }
-      } catch {
-        /* ignore malformed frame */
-      }
+    } catch {
+      /* ignore malformed frame */
     }
-  }
+  });
 }

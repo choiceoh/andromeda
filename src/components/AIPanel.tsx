@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { GatewayConfig } from "../gateway";
-import { useChat } from "../hooks";
-import { field, line, pane } from "../theme";
-import { useWorkspace } from "../workspaceContext";
+import type { GatewayConfig } from "@/gateway";
+import { useChat } from "@/hooks";
+import { field, line, pane } from "@/theme";
+import { useWorkspace } from "@/workspaceContext";
 import { ProactivePanel } from "./ProactivePanel";
 import { paneLabel } from "./panes";
 

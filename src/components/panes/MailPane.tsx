@@ -1,9 +1,10 @@
 import { useList } from "@refinedev/core";
-import type { Mail } from "../../types";
-import { color, ellipsis } from "../../theme";
-import { fmtDate, text } from "../../format";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
-import { Column, Grid, GridNotice } from "../Grid";
+import type { Mail } from "@/types";
+import { serializeList } from "@/aiText";
+import { color, ellipsis } from "@/theme";
+import { fmtDate, text } from "@/format";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { Column, Grid, GridNotice } from "@/components/Grid";
 
 export function MailPane() {
   const { connected } = useWorkspace();
@@ -11,18 +12,13 @@ export function MailPane() {
   const mails = result?.data ?? [];
 
   // Mirror the grid (subject · sender · date + snippet) so the AI sees what the user sees.
-  const aiText = mails.length
-    ? `[메일 ${mails.length}건]\n` +
-      mails
-        .map((m) => {
-          const who = text(m.from) || text(m.sender);
-          const head = `- ${m.unread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}${
-            m.date ? ` · ${fmtDate(m.date)}` : ""
-          }`;
-          return m.snippet ? `${head}\n    ${m.snippet}` : head;
-        })
-        .join("\n")
-    : "";
+  const aiText = serializeList("메일", mails, (m) => {
+    const who = text(m.from) || text(m.sender);
+    const head = `- ${m.unread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}${
+      m.date ? ` · ${fmtDate(m.date)}` : ""
+    }`;
+    return m.snippet ? `${head}\n    ${m.snippet}` : head;
+  });
   useRegisterPane("mail", aiText);
 
   const columns: Column<Mail>[] = [

@@ -2,9 +2,9 @@
 // Panes describe their columns declaratively; layout, header, and row chrome are
 // handled here once.
 import type { CSSProperties, ReactNode } from "react";
-import { line, muted, td, th, color } from "../theme";
-import { errText } from "../format";
-import { useWorkspace } from "../workspaceContext";
+import { line, muted, td, th, color } from "@/theme";
+import { errText } from "@/format";
+import { useWorkspace } from "@/workspaceContext";
 
 export interface Column<T> {
   header: ReactNode;

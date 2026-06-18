@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
-import { log } from "../log";
-import { color, pane } from "../theme";
+import { log } from "@/log";
+import { color, pane } from "@/theme";
 
 const uiLog = log.child("ui");
 

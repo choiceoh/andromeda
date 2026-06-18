@@ -1,18 +1,20 @@
 import { useList } from "@refinedev/core";
-import type { WorkItem } from "../../types";
-import { fmtDate } from "../../format";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
-import { Column, Grid, GridNotice } from "../Grid";
+import type { WorkItem } from "@/types";
+import { serializeList } from "@/aiText";
+import { fmtDate } from "@/format";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { Column, Grid, GridNotice } from "@/components/Grid";
 
 export function WorkfeedPane() {
   const { connected } = useWorkspace();
   const { result, query } = useList<WorkItem>({ resource: "workfeed", queryOptions: { enabled: connected } });
   const items = result?.data ?? [];
 
-  const aiText = items.length
-    ? `[작업피드 ${items.length}건]\n` +
-      items.map((w) => `- ${w.title ?? w.summary ?? "(항목)"}${w.kind ? ` [${w.kind}]` : ""}`).join("\n")
-    : "";
+  const aiText = serializeList(
+    "작업피드",
+    items,
+    (w) => `- ${w.title ?? w.summary ?? "(항목)"}${w.kind ? ` [${w.kind}]` : ""}`,
+  );
   useRegisterPane("workfeed", aiText);
 
   const columns: Column<WorkItem>[] = [

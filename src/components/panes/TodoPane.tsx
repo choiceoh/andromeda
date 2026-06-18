@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useCreate, useDelete, useList, useUpdate } from "@refinedev/core";
-import type { Todo } from "../../types";
-import { field } from "../../theme";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
-import { Column, Grid, GridNotice } from "../Grid";
+import type { Todo } from "@/types";
+import { serializeList } from "@/aiText";
+import { field } from "@/theme";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { Column, Grid, GridNotice } from "@/components/Grid";
 
 export function TodoPane() {
   const { connected } = useWorkspace();
@@ -15,10 +16,11 @@ export function TodoPane() {
   const { mutate: deleteTodo } = useDelete();
 
   // Serialize the grid to text so Deneb's AI reads exactly what's on screen.
-  const aiText = todos.length
-    ? `[할일 ${todos.length}건]\n` +
-      todos.map((t) => `- [${t.done ? "x" : " "}] ${t.title}${t.dueDate ? ` (마감 ${t.dueDate})` : ""}`).join("\n")
-    : "";
+  const aiText = serializeList(
+    "할일",
+    todos,
+    (t) => `- [${t.done ? "x" : " "}] ${t.title}${t.dueDate ? ` (마감 ${t.dueDate})` : ""}`,
+  );
   useRegisterPane("todo", aiText);
 
   function addTodo() {

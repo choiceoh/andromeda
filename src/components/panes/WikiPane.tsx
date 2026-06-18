@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { callRpc } from "../../gateway";
-import { MEMORY_RPC } from "../../resources";
-import type { WikiPage } from "../../types";
-import { errText } from "../../format";
-import { color, field, line, muted } from "../../theme";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
+import { callRpc } from "@/gateway";
+import { MEMORY_RPC } from "@/resources";
+import type { WikiPage } from "@/types";
+import { errText } from "@/format";
+import { color, field, line, muted } from "@/theme";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // Wiki editor over memory.* — search pages, open one into the editor, save back.
 // Query-driven (memory.search/get_page/write_page), so it calls RPCs directly.
