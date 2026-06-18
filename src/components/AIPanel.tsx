@@ -3,6 +3,7 @@ import type { GatewayConfig } from "../gateway";
 import { useChat } from "../hooks";
 import { field, line, pane } from "../theme";
 import { useWorkspace } from "../workspaceContext";
+import { ProactivePanel } from "./ProactivePanel";
 import { paneLabel } from "./panes";
 
 // Right column: Deneb AI collaboration. Reads the active pane's pushed text from
@@ -23,6 +24,7 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
   return (
     <aside style={{ ...pane, borderLeft: line, display: "flex", flexDirection: "column" }}>
       <h3 style={{ marginTop: 2 }}>데네브 AI</h3>
+      <ProactivePanel cfg={cfg} />
       <div style={{ fontSize: 12, opacity: 0.5, marginBottom: 6 }}>
         현재 뷰({paneLabel(view)})를 읽고, 도구로 바꾸면 즉시 반영됩니다
       </div>
