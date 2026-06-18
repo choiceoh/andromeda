@@ -55,16 +55,41 @@ function fmtDate(v?: string): string {
   return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-// Calendar timestamps arrive as a bare string or a { dateTime } / { date } object
-// (all-day events) — pull out the string form for fmtDate.
-function dateValue(v: unknown): string | undefined {
-  if (typeof v === "string") return v;
+// A calendar timestamp is a bare ISO string or a { dateTime } / { date } object.
+// `date` (no time) marks an all-day event, which must NOT go through new Date()'s
+// UTC-midnight parsing or it shifts a day in western zones.
+function calStamp(v: unknown): { iso?: string; allDay: boolean } {
+  if (typeof v === "string") return { iso: v, allDay: /^\d{4}-\d{2}-\d{2}$/.test(v) };
   if (v && typeof v === "object") {
     const o = v as Record<string, unknown>;
-    const s = o.dateTime ?? o.date;
-    return typeof s === "string" ? s : undefined;
+    if (typeof o.dateTime === "string") return { iso: o.dateTime, allDay: false };
+    if (typeof o.date === "string") return { iso: o.date, allDay: true };
   }
-  return undefined;
+  return { allDay: false };
+}
+
+// Format an all-day YYYY-MM-DD in LOCAL terms (date only, no UTC shift, no time).
+// `offsetDays` lets callers step back Google's exclusive all-day end.date.
+function fmtDay(ymd: string, offsetDays = 0): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd);
+  if (!m) return fmtDate(ymd);
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + offsetDays);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+// Human span for a calendar event. All-day events render date-only with the
+// exclusive end stepped back to the last inclusive day; timed events show time.
+function calSpan(start: unknown, end: unknown): string {
+  const s = calStamp(start);
+  if (s.allDay && s.iso) {
+    const e = calStamp(end);
+    const startDay = fmtDay(s.iso);
+    const endDay = e.iso ? fmtDay(e.iso, -1) : ""; // end.date is exclusive → -1 day
+    return !endDay || endDay === startDay ? startDay : `${startDay} ~ ${endDay}`;
+  }
+  return [s.iso ? fmtDate(s.iso) : "", calStamp(end).iso ? fmtDate(calStamp(end).iso!) : ""]
+    .filter(Boolean)
+    .join(" ~ ");
 }
 
 // Best-effort message from a Refine/HttpError (a plain object with `message`) or any throwable.
@@ -184,9 +209,11 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
                 mails
                   .map((m) => {
                     const who = text(m.from) || text(m.sender);
-                    return `- ${m.unread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}${
+                    const head = `- ${m.unread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}${
                       m.date ? ` · ${fmtDate(m.date)}` : ""
                     }`;
+                    // Mirror the grid, which also shows the snippet, so the AI sees what the user sees.
+                    return m.snippet ? `${head}\n    ${m.snippet}` : head;
                   })
                   .join("\n")
             : "";
@@ -195,7 +222,7 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
             ? `[일정 ${events.length}건]\n` +
                 events
                   .map((ev) => {
-                    const span = [fmtDate(dateValue(ev.start)), fmtDate(dateValue(ev.end))].filter(Boolean).join("~");
+                    const span = calSpan(ev.start, ev.end);
                     return `- ${ev.title ?? ev.summary ?? "(제목 없음)"}${span ? ` (${span})` : ""}${
                       ev.location ? ` @${ev.location}` : ""
                     }`;
@@ -422,7 +449,7 @@ function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayC
                 </thead>
                 <tbody>
                   {events.map((ev) => {
-                    const span = [fmtDate(dateValue(ev.start)), fmtDate(dateValue(ev.end))].filter(Boolean).join(" ~ ");
+                    const span = calSpan(ev.start, ev.end);
                     return (
                       <tr key={String(ev.id)} style={{ borderTop: line }}>
                         <td style={{ ...td, fontSize: 13, opacity: 0.8, whiteSpace: "nowrap" }}>{span || "—"}</td>
