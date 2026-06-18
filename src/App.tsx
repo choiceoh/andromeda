@@ -42,7 +42,13 @@ function text(v: unknown): string {
   if (typeof v === "string") return v;
   if (typeof v === "object") {
     const o = v as Record<string, unknown>;
-    return String(o.name ?? o.email ?? o.title ?? "");
+    // `??` would keep an empty-string `name` and hide a present email — pick the
+    // first NON-empty field instead so `{ name: "", email }` still shows the email.
+    for (const k of ["name", "email", "title"]) {
+      const s = o[k];
+      if (typeof s === "string" && s.trim()) return s;
+    }
+    return "";
   }
   return String(v);
 }
