@@ -1,0 +1,6 @@
+# esbuild ships a prebuilt platform binary; approve its install script so pnpm
+# builds it instead of leaving it "ignored".
+onlyBuiltDependencies:
+  - esbuild
+# CI installs deps explicitly, so skip pnpm's per-run deps re-verification.
+verifyDepsBeforeRun: false
