@@ -39,7 +39,7 @@ export function WorkspaceProvider({
   cfg: GatewayConfig;
   children: ReactNode;
 }) {
-  const [view, setView] = useState<View>("todo");
+  const [view, setView] = useState<View>("today"); // land on the 오늘 dashboard
   const [doc, setDoc] = useState("");
   const [aiText, setAiText] = useState("");
   const [activeResource, setActiveResource] = useState<string | undefined>(undefined);
