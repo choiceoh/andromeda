@@ -13,6 +13,7 @@ import { SearchPane } from "./SearchPane";
 import { PeoplePane } from "./PeoplePane";
 import { CronsPane } from "./CronsPane";
 import { WorkfeedPane } from "./WorkfeedPane";
+import { TodayPane } from "./TodayPane";
 
 export interface PaneDef {
   key: View;
@@ -22,6 +23,7 @@ export interface PaneDef {
 }
 
 export const PANES: PaneDef[] = [
+  { key: "today", label: "오늘", shortcut: "0", Component: TodayPane },
   { key: "todo", label: "할일", shortcut: "1", Component: TodoPane },
   { key: "doc", label: "문서", shortcut: "2", Component: DocPane },
   { key: "mail", label: "메일", shortcut: "3", Component: MailPane },

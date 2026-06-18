@@ -74,6 +74,7 @@ export interface SearchHit {
 }
 
 // Every navigable pane. Resource-backed panes share their key with a Refine
-// resource (see resources.ts); `doc` is a client-only scratch pane; `wiki` and
-// `search` are query-driven custom panes.
-export type View = "todo" | "doc" | "mail" | "calendar" | "wiki" | "search" | "people" | "crons" | "workfeed";
+// resource (see resources.ts); `today` is a read-only dashboard aggregating
+// several resources; `doc` is a client-only scratch pane; `wiki` and `search`
+// are query-driven custom panes.
+export type View = "today" | "todo" | "doc" | "mail" | "calendar" | "wiki" | "search" | "people" | "crons" | "workfeed";

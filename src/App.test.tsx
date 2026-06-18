@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "./App";
 import { Workstation } from "./components/Workstation";
@@ -34,16 +34,20 @@ describe("Workstation (connected, fixtures)", () => {
     mail: [{ id: "m1", subject: "분기 보고서", from: "lead@corp.com" }],
   });
 
-  it("renders grid rows from the data provider and switches panes", async () => {
+  it("lands on the 오늘 dashboard and switches to a resource pane", async () => {
     renderWithProviders(<Workstation cfg={{ url: "http://test", token: "tok" }} setCfg={() => {}} />, {
       connected: true,
       dataProvider,
     });
-    // Todo pane is the default view.
+    // The dashboard is the landing view and aggregates several resources at once.
     expect(await screen.findByText("세금 신고")).toBeInTheDocument();
+    expect(screen.getByText(/분기 보고서/)).toBeInTheDocument();
 
-    // Switching to the mail pane loads its resource.
-    await userEvent.click(screen.getByRole("button", { name: /메일/ }));
-    expect(await screen.findByText("분기 보고서")).toBeInTheDocument();
+    // The dashboard has no add-todo form; the 할일 pane does — proves the switch.
+    // Scope the nav click to the sidebar (the dashboard also has a 할일 card button).
+    expect(screen.queryByPlaceholderText("새 할일…")).not.toBeInTheDocument();
+    const nav = screen.getByRole("navigation");
+    await userEvent.click(within(nav).getByRole("button", { name: /할일/ }));
+    expect(await screen.findByPlaceholderText("새 할일…")).toBeInTheDocument();
   });
 });
