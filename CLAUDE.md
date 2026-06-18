@@ -56,6 +56,8 @@ Gateway (Deneb)  ──miniapp.* RPC──▶  gateway.ts (callRpc)
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `gateway.ts`           | Raw gateway client: `callRpc`, `ping`, `chatStream`, token/config storage. The only place that talks HTTP to the gateway (plus `events.ts`).                             |
 | `events.ts`            | Proactive push SSE client (`subscribeEvents`).                                                                                                                           |
+| `sse.ts`               | Shared SSE frame reader (`readSSE`) used by both `chatStream` and `events.ts`.                                                                                           |
+| `aiText.ts`            | `serializeList` — the counted-header + one-line-per-row projection list panes push to the AI.                                                                            |
 | `dataProvider.ts`      | Refine `DataProvider` — generic CRUD→RPC glue, **derived from `resources.ts`**.                                                                                          |
 | `resources.ts`         | **Single source of truth** for resource↔RPC mapping + Refine resource metadata. Query-driven RPCs (memory/search) live here as constants, not CRUD.                      |
 | `authProvider.ts`      | Token-based Refine auth provider (DESIGN §4).                                                                                                                            |
@@ -79,7 +81,8 @@ The registry makes this declarative. To add e.g. a `notes` grid:
 2. **`types.ts`** — add `Note` row interface and add `"notes"` to the `View` union.
 3. **`components/panes/NotePane.tsx`** — copy `PeoplePane.tsx` (the simplest read
    grid): `useList<Note>({ resource: "notes", queryOptions: { enabled: connected } })`,
-   build `aiText`, call `useRegisterPane("notes", aiText)`, render `<GridNotice><Grid…/></GridNotice>`.
+   build `aiText` with `serializeList("노트", notes, (n) => …)`, call
+   `useRegisterPane("notes", aiText)`, render `<GridNotice><Grid…/></GridNotice>`.
 4. **`components/panes/index.ts`** — add one `PANES` entry `{ key, label, shortcut, Component }`.
 
 Nav button, ⌘-shortcut, rendering, and AI context all follow automatically.
@@ -95,6 +98,8 @@ name to `resources.ts` as a constant. See `WikiPane.tsx` for read+edit+save.
 
 - **TypeScript strict.** `any` only at the dynamic RPC boundary (`dataProvider.ts`,
   `callRpc<T>`), never in UI code.
+- **Imports:** use the `@/` alias for cross-module imports (`@/theme`, `@/components/Grid`);
+  keep `./` only for same-directory siblings. No `../../` ladders.
 - **Logging, not `console`.** `import { log } from "./log"; const x = log.child("foo");`
   then `x.debug/info/warn/error`. Raise verbosity at runtime:
   `localStorage.setItem("andromeda.logLevel","debug")`.

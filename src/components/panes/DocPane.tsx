@@ -1,5 +1,5 @@
-import { field } from "../../theme";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
+import { field } from "@/theme";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // Client-only scratch document. Its text lives in the workspace context so it
 // survives pane switches, and it has no backing resource (AI reads it but there's

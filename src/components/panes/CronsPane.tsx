@@ -1,23 +1,20 @@
 import { useList } from "@refinedev/core";
-import type { Cron } from "../../types";
-import { fmtDate } from "../../format";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
-import { Column, Grid, GridNotice } from "../Grid";
+import type { Cron } from "@/types";
+import { serializeList } from "@/aiText";
+import { fmtDate } from "@/format";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { Column, Grid, GridNotice } from "@/components/Grid";
 
 export function CronsPane() {
   const { connected } = useWorkspace();
   const { result, query } = useList<Cron>({ resource: "crons", queryOptions: { enabled: connected } });
   const crons = result?.data ?? [];
 
-  const aiText = crons.length
-    ? `[크론 ${crons.length}건]\n` +
-      crons
-        .map(
-          (c) =>
-            `- ${c.name ?? "(이름 없음)"}${c.schedule ? ` (${c.schedule})` : ""}${c.enabled === false ? " [중지]" : ""}`,
-        )
-        .join("\n")
-    : "";
+  const aiText = serializeList(
+    "크론",
+    crons,
+    (c) => `- ${c.name ?? "(이름 없음)"}${c.schedule ? ` (${c.schedule})` : ""}${c.enabled === false ? " [중지]" : ""}`,
+  );
   useRegisterPane("crons", aiText);
 
   const columns: Column<Cron>[] = [

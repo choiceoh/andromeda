@@ -1,25 +1,19 @@
 import { useList } from "@refinedev/core";
-import type { CalEvent } from "../../types";
-import { calSpan } from "../../format";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
-import { Column, Grid, GridNotice } from "../Grid";
+import type { CalEvent } from "@/types";
+import { serializeList } from "@/aiText";
+import { calSpan } from "@/format";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { Column, Grid, GridNotice } from "@/components/Grid";
 
 export function CalendarPane() {
   const { connected } = useWorkspace();
   const { result, query } = useList<CalEvent>({ resource: "calendar", queryOptions: { enabled: connected } });
   const events = result?.data ?? [];
 
-  const aiText = events.length
-    ? `[일정 ${events.length}건]\n` +
-      events
-        .map((ev) => {
-          const span = calSpan(ev.start, ev.end);
-          return `- ${ev.title ?? ev.summary ?? "(제목 없음)"}${span ? ` (${span})` : ""}${
-            ev.location ? ` @${ev.location}` : ""
-          }`;
-        })
-        .join("\n")
-    : "";
+  const aiText = serializeList("일정", events, (ev) => {
+    const span = calSpan(ev.start, ev.end);
+    return `- ${ev.title ?? ev.summary ?? "(제목 없음)"}${span ? ` (${span})` : ""}${ev.location ? ` @${ev.location}` : ""}`;
+  });
   useRegisterPane("calendar", aiText);
 
   const columns: Column<CalEvent>[] = [

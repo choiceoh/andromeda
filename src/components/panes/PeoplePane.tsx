@@ -1,18 +1,21 @@
 import { useList } from "@refinedev/core";
-import type { Person } from "../../types";
-import { text } from "../../format";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
-import { Column, Grid, GridNotice } from "../Grid";
+import type { Person } from "@/types";
+import { serializeList } from "@/aiText";
+import { text } from "@/format";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { Column, Grid, GridNotice } from "@/components/Grid";
 
 export function PeoplePane() {
   const { connected } = useWorkspace();
   const { result, query } = useList<Person>({ resource: "people", queryOptions: { enabled: connected } });
   const people = result?.data ?? [];
 
-  const aiText = people.length
-    ? `[연락처 ${people.length}명]\n` +
-      people.map((p) => `- ${p.name ?? text(p.email) ?? "(이름 없음)"}${p.org ? ` · ${p.org}` : ""}`).join("\n")
-    : "";
+  const aiText = serializeList(
+    "연락처",
+    people,
+    (p) => `- ${p.name ?? text(p.email) ?? "(이름 없음)"}${p.org ? ` · ${p.org}` : ""}`,
+    "명",
+  );
   useRegisterPane("people", aiText);
 
   const columns: Column<Person>[] = [

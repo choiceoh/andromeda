@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
-import type { GatewayConfig } from "../gateway";
-import { pane } from "../theme";
-import type { View } from "../types";
-import { useWorkspace } from "../workspaceContext";
+import type { GatewayConfig } from "@/gateway";
+import { pane } from "@/theme";
+import type { View } from "@/types";
+import { useWorkspace } from "@/workspaceContext";
 import { AIPanel } from "./AIPanel";
 import { Sidebar } from "./Sidebar";
 import { PANES } from "./panes";

@@ -3,7 +3,7 @@
 // data-backed), and add one entry here. Nav button, keyboard shortcut, and routing
 // all follow automatically.
 import type { ComponentType } from "react";
-import type { View } from "../../types";
+import type { View } from "@/types";
 import { TodoPane } from "./TodoPane";
 import { DocPane } from "./DocPane";
 import { MailPane } from "./MailPane";

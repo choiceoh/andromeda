@@ -1,7 +1,7 @@
-import type { GatewayConfig } from "../gateway";
-import { useEvents } from "../hooks";
-import { line } from "../theme";
-import { useWorkspace } from "../workspaceContext";
+import type { GatewayConfig } from "@/gateway";
+import { useEvents } from "@/hooks";
+import { line } from "@/theme";
+import { useWorkspace } from "@/workspaceContext";
 
 // Proactive nudges pushed by Deneb (events SSE). Sits atop the AI panel; renders
 // nothing until something arrives, so it stays out of the way when quiet.

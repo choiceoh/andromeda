@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { callRpc } from "../../gateway";
-import { SEARCH_RPC } from "../../resources";
-import type { SearchHit } from "../../types";
-import { errText } from "../../format";
-import { field, line, muted } from "../../theme";
-import { useRegisterPane, useWorkspace } from "../../workspaceContext";
+import { callRpc } from "@/gateway";
+import { SEARCH_RPC } from "@/resources";
+import type { SearchHit } from "@/types";
+import { errText } from "@/format";
+import { field, line, muted } from "@/theme";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // Unified search (search.all) — query-driven, so it calls the RPC directly rather
 // than through the CRUD data provider.
