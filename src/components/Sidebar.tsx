@@ -25,7 +25,7 @@ export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: Gatew
           <span style={kbd}>⌘{p.shortcut}</span>
         </button>
       ))}
-      <div style={{ opacity: 0.45, fontSize: 12, marginTop: 8 }}>위키 · 검색 (다음)</div>
+      <div style={{ opacity: 0.45, fontSize: 12, marginTop: 8 }}>캡처 OCR·ASR (다음)</div>
 
       <div style={{ marginTop: "auto", paddingTop: 12, borderTop: line, display: "grid", gap: 6 }}>
         <input

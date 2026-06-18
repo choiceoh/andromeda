@@ -1,13 +1,18 @@
 // Pane registry — the workstation's navigation is DERIVED from this list. Adding a
-// Phase 2 pane (wiki, search, …) means: build the pane component, add its resource
-// to resources.ts (if data-backed), and add one entry here. Nav button, keyboard
-// shortcut, and routing all follow automatically.
+// pane means: build the pane component, add its resource to resources.ts (if
+// data-backed), and add one entry here. Nav button, keyboard shortcut, and routing
+// all follow automatically.
 import type { ComponentType } from "react";
 import type { View } from "../../types";
 import { TodoPane } from "./TodoPane";
 import { DocPane } from "./DocPane";
 import { MailPane } from "./MailPane";
 import { CalendarPane } from "./CalendarPane";
+import { WikiPane } from "./WikiPane";
+import { SearchPane } from "./SearchPane";
+import { PeoplePane } from "./PeoplePane";
+import { CronsPane } from "./CronsPane";
+import { WorkfeedPane } from "./WorkfeedPane";
 
 export interface PaneDef {
   key: View;
@@ -21,6 +26,11 @@ export const PANES: PaneDef[] = [
   { key: "doc", label: "문서", shortcut: "2", Component: DocPane },
   { key: "mail", label: "메일", shortcut: "3", Component: MailPane },
   { key: "calendar", label: "일정", shortcut: "4", Component: CalendarPane },
+  { key: "wiki", label: "위키", shortcut: "5", Component: WikiPane },
+  { key: "search", label: "검색", shortcut: "6", Component: SearchPane },
+  { key: "people", label: "연락처", shortcut: "7", Component: PeoplePane },
+  { key: "crons", label: "크론", shortcut: "8", Component: CronsPane },
+  { key: "workfeed", label: "작업피드", shortcut: "9", Component: WorkfeedPane },
 ];
 
 export const paneLabel = (key: View): string => PANES.find((p) => p.key === key)?.label ?? key;

@@ -27,7 +27,7 @@
 | 플랫폼 | 크로스플랫폼 — 직장 Windows · 집 Mac 둘 다 (경량, Electron 회피) |
 | 연동 | Deneb 게이트웨이 `miniapp.*` RPC(data provider) + SSE(`X-Deneb-Client-Token`) |
 | 세션 | `client:main` 공유 (모바일과 같은 단일 에이전트 세션) |
-| 상태 | **설계 단계** — 상세는 [`docs/DESIGN.md`](docs/DESIGN.md) |
+| 상태 | **Phase 1 완료 + Phase 2 골격** — Tauri 셸·테스트/CI·events 계층 기초 구축. 상세는 [`docs/DESIGN.md`](docs/DESIGN.md) |
 
 ## 핵심 설계 판단 (왜 이 스택인가)
 
@@ -41,7 +41,7 @@
 
 ## 개발 환경
 
-- 빌드: **이 Linux 서버에서 가능** (Tauri Linux 타깃 + Rust/Node). 실행은 Win·Mac·Linux 전부.
-- 검증: 웹 프론트라 Playwright/헤드리스 브라우저로 AI 자동 검증 가능.
+- 빌드: 웹 `pnpm build` + 데스크탑 `pnpm tauri:build` (Tauri Linux/Win/Mac 타깃).
+- 검증: `pnpm test` (Vitest+jsdom, 브라우저 불필요) + `pnpm typecheck`. PR마다 GitHub Actions CI.
 - 게이트웨이 연결: Tailscale/LAN URL + `X-Deneb-Client-Token`
   (게이트웨이 호스트 `~/.deneb/client_token`).

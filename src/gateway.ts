@@ -4,7 +4,7 @@
 // Phase 1: wrap callRpc() in a Refine data provider so resources (mail, calendar,
 // todo, memory …) flow into grids/forms automatically.
 
-const TOKEN_HEADER = "X-Deneb-Client-Token";
+export const TOKEN_HEADER = "X-Deneb-Client-Token";
 const STORAGE_KEY = "andromeda.gateway";
 
 export interface GatewayConfig {
@@ -38,7 +38,7 @@ interface RpcEnvelope<T> {
   error?: { code: string; message: string };
 }
 
-const base = (url: string) => url.replace(/\/$/, "");
+export const base = (url: string) => url.replace(/\/$/, "");
 
 // One JSON-RPC call against POST /api/v1/miniapp/rpc.
 export async function callRpc<T>(
