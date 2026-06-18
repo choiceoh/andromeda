@@ -23,7 +23,7 @@ export function App() {
       resources={refineResources}
       options={{ disableTelemetry: true }}
     >
-      <WorkspaceProvider connected={connected}>
+      <WorkspaceProvider connected={connected} cfg={cfg}>
         <Workstation cfg={cfg} setCfg={setCfg} />
       </WorkspaceProvider>
     </Refine>

@@ -7,10 +7,14 @@
 // is mounted (Workstation renders one at a time), so whoever is mounted owns the
 // AI context and names the resource the AI's tool calls should invalidate.
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { GatewayConfig } from "./gateway";
 import type { View } from "./types";
 
 interface WorkspaceCtx {
   connected: boolean;
+  // The gateway config, exposed so query-driven panes (wiki/search) can call
+  // non-CRUD RPCs directly (DESIGN §9) instead of going through the data provider.
+  cfg: GatewayConfig;
   view: View;
   setView: (v: View) => void;
   // `doc` lives here (not in the pane) so the scratch document survives pane
@@ -26,7 +30,15 @@ interface WorkspaceCtx {
 
 const Ctx = createContext<WorkspaceCtx | null>(null);
 
-export function WorkspaceProvider({ connected, children }: { connected: boolean; children: ReactNode }) {
+export function WorkspaceProvider({
+  connected,
+  cfg,
+  children,
+}: {
+  connected: boolean;
+  cfg: GatewayConfig;
+  children: ReactNode;
+}) {
   const [view, setView] = useState<View>("todo");
   const [doc, setDoc] = useState("");
   const [aiText, setAiText] = useState("");
@@ -38,7 +50,7 @@ export function WorkspaceProvider({ connected, children }: { connected: boolean;
   };
 
   return (
-    <Ctx.Provider value={{ connected, view, setView, doc, setDoc, aiText, activeResource, registerPane }}>
+    <Ctx.Provider value={{ connected, cfg, view, setView, doc, setDoc, aiText, activeResource, registerPane }}>
       {children}
     </Ctx.Provider>
   );

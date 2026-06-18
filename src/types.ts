@@ -33,6 +33,47 @@ export interface CalEvent {
   location?: string;
 }
 
+export interface Person {
+  id: string | number;
+  name?: string;
+  email?: string;
+  org?: string;
+  role?: string;
+}
+
+export interface Cron {
+  id: string | number;
+  name?: string;
+  schedule?: string;
+  enabled?: boolean;
+  nextRun?: string;
+}
+
+export interface WorkItem {
+  id: string | number;
+  title?: string;
+  summary?: string;
+  kind?: string;
+  ts?: string;
+}
+
+// Wiki (memory.*) and unified search are query-driven, so they're handled by
+// custom panes calling RPCs directly rather than the CRUD data provider.
+export interface WikiPage {
+  id?: string;
+  path?: string;
+  title?: string;
+  category?: string;
+}
+
+export interface SearchHit {
+  id?: string;
+  type?: string;
+  title?: string;
+  snippet?: string;
+}
+
 // Every navigable pane. Resource-backed panes share their key with a Refine
-// resource (see resources.ts); `doc` is a client-only scratch pane.
-export type View = "todo" | "doc" | "mail" | "calendar";
+// resource (see resources.ts); `doc` is a client-only scratch pane; `wiki` and
+// `search` are query-driven custom panes.
+export type View = "todo" | "doc" | "mail" | "calendar" | "wiki" | "search" | "people" | "crons" | "workfeed";

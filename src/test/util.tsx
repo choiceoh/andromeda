@@ -38,7 +38,9 @@ export function renderWithProviders(
       resources={refineResources}
       options={{ disableTelemetry: true }}
     >
-      <WorkspaceProvider connected={connected}>{ui}</WorkspaceProvider>
+      <WorkspaceProvider connected={connected} cfg={cfg}>
+        {ui}
+      </WorkspaceProvider>
     </Refine>,
   );
 }

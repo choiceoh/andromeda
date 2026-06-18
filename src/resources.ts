@@ -41,7 +41,29 @@ export const RESOURCE_DEFS: ResourceDef[] = [
     update: "miniapp.calendar.update",
     remove: "miniapp.calendar.delete",
   },
+  // Read-mostly resources — parameterless lists flow straight into a grid.
+  { name: "people", label: "연락처", list: "miniapp.people.list" },
+  {
+    name: "crons",
+    label: "크론",
+    list: "miniapp.crons.list",
+    get: "miniapp.crons.get",
+    update: "miniapp.crons.update",
+    remove: "miniapp.crons.remove",
+  },
+  { name: "workfeed", label: "작업피드", list: "miniapp.workfeed.list" },
 ];
+
+// memory(위키) and search are NOT in the CRUD registry: their reads are
+// query-driven (memory.search/get_page, search.all) rather than parameterless
+// lists, so dedicated panes call these RPCs directly (DESIGN §9).
+export const MEMORY_RPC = {
+  search: "miniapp.memory.search",
+  getPage: "miniapp.memory.get_page",
+  writePage: "miniapp.memory.write_page",
+} as const;
+
+export const SEARCH_RPC = "miniapp.search.all";
 
 export const RESOURCE_MAP: Record<string, ResourceDef> = Object.fromEntries(
   RESOURCE_DEFS.map((r) => [r.name, r]),

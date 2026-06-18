@@ -26,4 +26,10 @@ describe("resource registry", () => {
     expect(resourceDef("mail").get).toBe("miniapp.gmail.get");
     expect(resourceDef("calendar").list).toBe("miniapp.calendar.list_upcoming");
   });
+
+  it("registers the read-mostly resources (people/crons/workfeed)", () => {
+    for (const name of ["people", "crons", "workfeed"]) {
+      expect(resourceDef(name).list).toMatch(/^miniapp\./);
+    }
+  });
 });
