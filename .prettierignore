@@ -4,3 +4,4 @@ pnpm-lock.yaml
 src-tauri/target
 src-tauri/Cargo.lock
 public/mockServiceWorker.js
+src/bindings

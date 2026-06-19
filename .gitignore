@@ -17,8 +17,8 @@ out/
 target/
 src-tauri/target/
 
-# Wails (generated bindings + compiled binary)
-src/bindings/
+# Wails compiled binary (generated bindings under src/bindings ARE committed so the
+# web build resolves them without the Go/Wails toolchain)
 /andromeda
 bin/
 
