@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Andromeda
+Comment=Deneb 데스크탑 워크스테이션
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/Andromeda %u
+Terminal=false
+Type=Application
+Icon=Andromeda
+Categories=Utility;
+StartupWMClass=Andromeda
+
+ 

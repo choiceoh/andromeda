@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.0.1"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.0.1",
+			"CompanyName": "Deneb",
+			"FileDescription": "Deneb 데스크탑 워크스테이션",
+			"LegalCopyright": "(c) 2026 Deneb",
+			"ProductName": "Andromeda",
+			"Comments": "Some Product Comments"
+		}
+	}
+}
