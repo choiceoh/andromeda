@@ -17,6 +17,11 @@ out/
 target/
 src-tauri/target/
 
+# Wails (generated bindings + compiled binary)
+src/bindings/
+/andromeda
+bin/
+
 # Environment / secrets
 .env
 .env.*
