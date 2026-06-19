@@ -1,13 +1,22 @@
 # Tauri → Wails v3 마이그레이션 런북
 
-> **상태: 미검증 스캐폴드.** 이 저장소를 만든 샌드박스에는 Wails CLI가 없고 네트워크가
-> 차단돼 있어, 여기서는 Wails 코드를 컴파일·실행·바인딩 생성할 수 없었다. 따라서 아래는
-> **네 머신에서 `wails3 dev`로 검증하며 진행하는 가이드**다. Wails v3는 아직 알파라
-> (`v3.0.0-alpha.*`) 일부 API 시그니처가 이 문서와 다를 수 있다 — 안 맞으면 에러를
-> 그대로 붙여주면 맞춰준다.
+> **상태: 핵심 검증 완료 (2026-06, Wails v3 alpha2.104, macOS arm64).** 이 문서 일부
+> 코드는 초기 추측이었고, 이후 실제로 빌드해 **검증된 코드는 커밋된 파일이 1순위**다:
+> [`main.go`](main.go) · [`tokens.go`](tokens.go) · [`src/tauri.ts`](src/tauri.ts) ·
+> [`go.mod`](go.mod). 검증된 사실:
 >
-> **Tauri는 건드리지 않았다.** `src-tauri/`, `.github/workflows/release.yml`, 방금 만든
-> `v0.0.1` 릴리즈는 그대로 폴백으로 남아 있다. Wails가 초록불이 된 다음 9단계에서 제거한다.
+> - ✅ `go build` 성공 → Mach-O arm64 (Wails 앱 + `dist/` 임베드 + TokenService)
+> - ✅ `wails3 generate bindings` → `src/bindings/andromeda/tokenservice` (커밋됨)
+> - ✅ 프론트 배선: `src/tauri.ts`가 바인딩을 **isTauri() 가드 안에서 동적 import**
+>   (웹/테스트는 `@wailsio/runtime` 미로드). 웹 빌드 typecheck·lint·format·build·테스트
+>   44/44 모두 그린.
+> - ⚠️ **미검증**: 실제 창 실행/키체인 왕복(`wails3 dev`, 디스플레이 필요) · `.app`/`.msi`
+>   패키징(아래 8단계, 구조 결정 필요) · Windows 빌드(CI).
+>
+> 런북의 추측 코드와 커밋된 파일이 다르면 **커밋된 파일을 믿어라.**
+>
+> **Tauri는 건드리지 않았다.** `src-tauri/`, `.github/workflows/release.yml`, `v0.0.1`
+> 릴리즈는 폴백으로 남아 있다. Wails가 완전히 초록불이 된 다음 9단계에서 제거한다.
 
 마이그레이션의 핵심: **네이티브 표면이 작고 한 군데에 격리돼 있다.** 바뀌는 건
 `src-tauri/`(Rust 51줄)와 `src/tauri.ts`(프론트 글루 37줄) 둘뿐이고, `App.tsx`·`gateway.ts`는
