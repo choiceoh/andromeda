@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { log } from "@/log";
-import { color, pane } from "@/theme";
+import { color, font, pane } from "@/theme";
 
 const uiLog = log.child("ui");
 
@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const { error } = this.state;
     if (!error) return this.props.children;
     return (
-      <div style={{ ...pane, fontFamily: "system-ui, sans-serif", color: color.text }}>
+      <div style={{ ...pane, fontFamily: font, color: color.text }}>
         <h2>문제가 발생했습니다</h2>
         <p style={{ color: color.danger }}>{error.message}</p>
         {error.stack && (

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import type { GatewayConfig } from "@/gateway";
-import { pane } from "@/theme";
+import { font, pane } from "@/theme";
 import type { View } from "@/types";
 import { useWorkspace } from "@/workspaceContext";
 import { AIPanel } from "./AIPanel";
@@ -39,7 +39,7 @@ export function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: G
         display: "grid",
         gridTemplateColumns: "210px 1fr 340px",
         height: "100vh",
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: font,
       }}
     >
       <Sidebar cfg={cfg} setCfg={setCfg} />

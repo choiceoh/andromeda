@@ -3,7 +3,7 @@ import { callRpc } from "@/gateway";
 import { MEMORY_RPC } from "@/resources";
 import type { WikiPage } from "@/types";
 import { errText } from "@/format";
-import { color, field, line, muted } from "@/theme";
+import { color, field, font, line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // Wiki editor over memory.* — search pages, open one into the editor, save back.
@@ -115,7 +115,7 @@ export function WikiPane() {
             ...field,
             flex: 1,
             resize: "none",
-            fontFamily: "ui-monospace, monospace",
+            fontFamily: font,
             fontSize: 13,
             lineHeight: 1.5,
           }}

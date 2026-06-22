@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "pretendard/dist/web/variable/pretendardvariable.css";
 import { App } from "./App";
 
 // Dev mock mode (`pnpm dev:mock`): start the MSW mock gateway and seed a dummy
