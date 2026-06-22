@@ -1,15 +1,15 @@
 import { useEffect, useMemo } from "react";
 import type { GatewayConfig } from "@/gateway";
-import { font, pane } from "@/theme";
 import type { View } from "@/types";
 import { useWorkspace } from "@/workspaceContext";
 import { AIPanel } from "./AIPanel";
 import { Sidebar } from "./Sidebar";
 import { PANES } from "./panes";
 
-// The three-column shell: nav/dashboard · work area · Deneb AI. The work area
-// renders only the active pane (so just its resource fetches), and ⌘/Ctrl+N
-// shortcuts are derived from the pane registry.
+// The shell: a slim nav rail + two floating panels (work area · Deneb AI) drifting
+// on the window's gradient, Zen-browser style. The work area renders only the
+// active pane; ⌘/Ctrl+0–9 shortcuts are derived from the pane registry (the labels
+// are hidden in the rail, but the keys still work).
 export function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayConfig) => void }) {
   const { view, setView } = useWorkspace();
 
@@ -36,14 +36,15 @@ export function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: G
   return (
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "210px 1fr 340px",
+        display: "flex",
+        gap: "var(--gap)",
         height: "100vh",
-        fontFamily: font,
+        padding: "var(--gap)",
+        boxSizing: "border-box",
       }}
     >
       <Sidebar cfg={cfg} setCfg={setCfg} />
-      <main style={{ ...pane }}>
+      <main className="panel" style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "20px 22px" }}>
         <Active />
       </main>
       <AIPanel cfg={cfg} />

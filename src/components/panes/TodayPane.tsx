@@ -1,15 +1,15 @@
 import { useList } from "@refinedev/core";
 import type { CalEvent, Mail, Todo, View, WorkItem } from "@/types";
 import { calSpan, text } from "@/format";
-import { color, line, muted } from "@/theme";
-import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { Icon } from "@/components/Icon";
 import { GridNotice } from "@/components/Grid";
+import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // "오늘" dashboard — the workstation's landing pane. It adds NO new gateway
 // plumbing: it fans out the existing list resources (calendar/mail/todo/workfeed)
-// through the data provider, shows the top items per section as compact cards, and
-// serializes the whole briefing to the AI panel via useRegisterPane. Prioritizing
-// ("오늘 뭐부터?") is delegated to Deneb through that text projection — not done here.
+// through the data provider, shows the top items per section as compact briefings,
+// and serializes the whole briefing to the AI panel via useRegisterPane.
+// Prioritizing ("오늘 뭐부터?") is delegated to Deneb through that text projection.
 
 const MAX = 6; // a briefing is a glance; the full list lives in each resource's own pane.
 
@@ -17,7 +17,7 @@ interface Brief {
   label: string;
   view: View;
   empty: string;
-  total: number; // relevant items before the cap — shown in the card title and AI header
+  total: number; // relevant items before the cap — shown in the header and AI projection
   lines: string[]; // up to MAX compact one-liners (what the AI reads === what's on screen)
   query: { isLoading: boolean; isError?: boolean; error?: unknown };
 }
@@ -97,25 +97,25 @@ export function TodayPane() {
 
   return (
     <>
-      <h2 style={{ marginTop: 2 }}>
-        오늘 <span style={{ ...muted, fontSize: 14, fontWeight: 400 }}>{today}</span>
+      <h2 style={{ marginTop: 0 }}>
+        오늘 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--muted-2)", letterSpacing: 0 }}>{today}</span>
       </h2>
-      <p style={{ ...muted, marginTop: -4, fontSize: 13 }}>
-        우측 AI 패널에 “오늘 뭐부터?”라고 물어보세요 — 데네브가 아래 컨텍스트로 우선순위를 제안합니다.
+      <p style={{ color: "var(--muted-2)", fontSize: 12, margin: "6px 0 20px", lineHeight: 1.5 }}>
+        우측 데네브에게 “오늘 뭐부터?”라고 물어보세요 — 아래 컨텍스트로 우선순위를 제안합니다.
       </p>
       {!connected ? (
-        <p style={muted}>게이트웨이에 연결하면 표시됩니다 (좌측 하단).</p>
+        <p style={{ color: "var(--muted-2)", fontSize: 13 }}>게이트웨이에 연결하면 표시됩니다 (좌측 하단).</p>
       ) : (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: 12,
-            maxWidth: 880,
+            gridTemplateColumns: "repeat(auto-fit, minmax(232px, 1fr))",
+            gap: "20px 28px",
+            maxWidth: 760,
           }}
         >
-          {briefs.map((b) => (
-            <Card key={b.label} brief={b} onNav={() => setView(b.view)} />
+          {briefs.map((b, i) => (
+            <Section key={b.label} brief={b} index={i} onNav={() => setView(b.view)} />
           ))}
         </div>
       )}
@@ -123,48 +123,52 @@ export function TodayPane() {
   );
 }
 
-function Card({ brief, onNav }: { brief: Brief; onNav: () => void }) {
+function Section({ brief, index, onNav }: { brief: Brief; index: number; onNav: () => void }) {
   const { label, total, lines, empty, query } = brief;
   return (
-    <section
-      style={{
-        border: line,
-        borderRadius: 6,
-        padding: "10px 12px",
-        display: "flex",
-        flexDirection: "column",
-        minWidth: 0,
-      }}
-    >
+    <section className="fade-up" style={{ minWidth: 0, animationDelay: `${index * 60}ms` }}>
       <button
         onClick={onNav}
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "baseline",
+          gap: 7,
+          width: "100%",
           background: "none",
           border: "none",
-          padding: 0,
-          marginBottom: 8,
-          color: color.text,
+          borderBottom: "1px solid var(--line)",
+          padding: "0 0 7px",
+          margin: "0 0 9px",
           cursor: "pointer",
-          fontSize: 14,
-          fontWeight: 600,
+          color: "var(--ink)",
         }}
       >
-        <span>
-          {label} {total > 0 && <span style={muted}>{total}</span>}
+        <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-0.01em" }}>{label}</span>
+        {total > 0 && <span style={{ fontSize: 11, color: "var(--muted-2)" }}>{total}</span>}
+        <span style={{ marginLeft: "auto", color: "var(--faint)", display: "inline-flex" }}>
+          <Icon name="arrow-right" size={14} />
         </span>
-        <span style={{ opacity: 0.4 }}>→</span>
       </button>
       <GridNotice query={query} count={lines.length} empty={empty}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {lines.map((l, i) => (
-            <div key={i} style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div
+              key={i}
+              style={{
+                fontSize: 13,
+                color: "var(--ink-2)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                lineHeight: 1.5,
+              }}
+            >
               {l}
             </div>
           ))}
-          {total > lines.length && <div style={{ ...muted, fontSize: 12 }}>…외 {total - lines.length}건</div>}
+          {total > lines.length && (
+            <div style={{ fontSize: 12, color: "var(--muted-2)", marginTop: 2 }}>…외 {total - lines.length}건</div>
+          )}
         </div>
       </GridNotice>
     </section>

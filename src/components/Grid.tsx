@@ -1,8 +1,8 @@
 // Generic dense data grid + the shared disconnected/error/loading/empty notice.
-// Panes describe their columns declaratively; layout, header, and row chrome are
-// handled here once.
+// Panes describe their columns declaratively; the table chrome (header, row
+// hairlines, hover) lives in the .dgrid class in styles.css.
 import type { CSSProperties, ReactNode } from "react";
-import { line, muted, td, th, color } from "@/theme";
+import { color, muted } from "@/theme";
 import { errText } from "@/format";
 import { useWorkspace } from "@/workspaceContext";
 
@@ -27,11 +27,11 @@ export function Grid<T>({
   rowStyle?: (row: T) => CSSProperties;
 }) {
   return (
-    <table style={{ borderCollapse: "collapse", width: "100%", maxWidth }}>
+    <table className="dgrid" style={{ maxWidth }}>
       <thead>
-        <tr style={{ textAlign: "left", opacity: 0.6, fontSize: 13 }}>
+        <tr>
           {columns.map((c, i) => (
-            <th key={i} style={c.width ? { ...th, width: c.width } : th}>
+            <th key={i} style={c.width ? { width: c.width } : undefined}>
               {c.header}
             </th>
           ))}
@@ -39,9 +39,9 @@ export function Grid<T>({
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={getKey(row)} style={{ borderTop: line, ...rowStyle?.(row) }}>
+          <tr key={getKey(row)} style={rowStyle?.(row)}>
             {columns.map((c, i) => (
-              <td key={i} style={{ ...td, ...c.tdStyle }}>
+              <td key={i} style={c.tdStyle}>
                 {c.cell(row)}
               </td>
             ))}
@@ -67,9 +67,10 @@ export function GridNotice({
   children: ReactNode;
 }) {
   const { connected } = useWorkspace();
-  if (!connected) return <p style={muted}>게이트웨이에 연결하면 표시됩니다 (좌측 하단).</p>;
-  if (query.isError) return <p style={{ ...muted, color: color.danger }}>불러오기 실패: {errText(query.error)}</p>;
-  if (query.isLoading) return <p style={muted}>불러오는 중…</p>;
-  if (count === 0) return <p style={muted}>{empty}</p>;
+  const notice: CSSProperties = { ...muted, fontSize: 13 };
+  if (!connected) return <p style={notice}>게이트웨이에 연결하면 표시됩니다 (좌측 하단).</p>;
+  if (query.isError) return <p style={{ fontSize: 13, color: color.danger }}>불러오기 실패: {errText(query.error)}</p>;
+  if (query.isLoading) return <p style={notice}>불러오는 중…</p>;
+  if (count === 0) return <p style={notice}>{empty}</p>;
   return <>{children}</>;
 }

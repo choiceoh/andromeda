@@ -1,0 +1,327 @@
+/* Andromeda design layer — the "warm Zen" light theme.
+ *
+ * Single source of color/elevation/typography truth for things inline styles
+ * can't express (hover/focus/scrollbars/keyframes/translucency). theme.ts mirrors
+ * these tokens for inline use. Components reference tokens/classes — never raw hex.
+ *
+ * Aesthetic: floating rounded panels on a soft warm-cool gradient, a slim
+ * translucent nav rail whose active tab "lifts" like a Zen browser tab, one warm
+ * clay accent, restrained motion. */
+
+:root {
+  /* window background — soft warm glow over a cool neutral gradient */
+  --grad:
+    radial-gradient(130% 90% at 12% 2%, #f8ebe2 0%, rgba(248, 235, 226, 0) 48%),
+    linear-gradient(157deg, #eef0f5 0%, #e9eaf0 52%, #efeae9 100%);
+
+  /* surfaces */
+  --panel: #ffffff;
+  --panel-sunken: #f7f7f9;
+
+  /* ink / text tiers */
+  --ink: #1f2128;
+  --ink-2: #3e434c;
+  --muted: #6f747e;
+  --muted-2: #9a9ea7;
+  --faint: #bcbfc6;
+
+  /* lines */
+  --line: #ececef;
+  --line-2: #e2e3e6;
+
+  /* warm clay accent (the single point color) */
+  --accent: #c17a5b;
+  --accent-deep: #a85f43;
+  --accent-soft: rgba(193, 122, 91, 0.13);
+
+  /* semantic */
+  --online: #6b9b80;
+  --due: #a85038;
+
+  /* shape */
+  --radius-panel: 14px;
+  --radius-ctl: 9px;
+  --radius-pill: 8px;
+
+  /* elevation */
+  --shadow-panel: 0 10px 34px -14px rgba(33, 38, 66, 0.22), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-pill: 0 2px 8px -2px rgba(40, 45, 70, 0.18);
+
+  /* layout */
+  --rail-w: 100px;
+  --ai-w: 352px;
+  --gap: 12px;
+
+  --font: "Pretendard Variable", Pretendard, system-ui, "Segoe UI", "Malgun Gothic", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--grad) fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings:
+    "tnum" 1,
+    "cv11" 1;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+h2 {
+  font-size: 23px;
+  margin: 0;
+}
+h3 {
+  font-size: 15px;
+  margin: 0;
+}
+p {
+  margin: 0;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+/* scrollbars — thin, quiet */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cfd2d8 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #d4d7dd;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #bdc0c8;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: rgba(193, 122, 91, 0.18);
+}
+::placeholder {
+  color: var(--muted-2);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 5px;
+}
+
+/* floating panel */
+.panel {
+  background: var(--panel);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+/* nav rail item — the lifting Zen tab */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 9px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.nav-item .ico {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--muted-2);
+  transition: color 0.15s ease;
+}
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--ink-2);
+}
+.nav-item:hover .ico {
+  color: var(--muted);
+}
+.nav-item.active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-pill);
+}
+.nav-item.active .ico {
+  color: var(--accent);
+}
+
+/* form controls */
+.field {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-ctl);
+  padding: 8px 11px;
+  font-size: 13px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.btn {
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: var(--radius-ctl);
+  padding: 8px 13px;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.05s ease;
+}
+.btn:hover:not(:disabled) {
+  background: #f5f5f7;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-accent:hover:not(:disabled) {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* live status dot */
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+.live-dot.pulse {
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* dense data grid */
+.dgrid {
+  width: 100%;
+  border-collapse: collapse;
+}
+.dgrid thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+  padding: 4px 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.dgrid tbody td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.dgrid tbody tr {
+  transition: background 0.12s ease;
+}
+.dgrid tbody tr:hover {
+  background: #faf9f8;
+}
+
+/* today section header */
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 7px;
+  margin-bottom: 8px;
+}
+
+/* micro label (tracked uppercase, for latin labels like DENEB AI) */
+.micro {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* one-time staggered entrance */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fadeUp 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

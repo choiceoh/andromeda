@@ -1,52 +1,41 @@
-// Design tokens for the workstation. Centralized here so panes share one visual
-// language (dark, dense, desktop-business feel) instead of scattering hex codes
-// and paddings across components — the skeleton's single source of style truth.
+// Typed mirror of the design tokens defined in styles.css (the :root CSS vars).
+// Components reference these for INLINE styles; stateful/structural styling
+// (hover, focus, scrollbars, the lifting nav tab) lives in styles.css classes.
+// Rule: no raw hex in components — only these tokens or a styles.css class.
 import type { CSSProperties } from "react";
 
 export const color = {
-  text: "#e8e8e8",
-  line: "#2a2a2a",
-  field: "#1f1f1f",
-  active: "#2a2a2a",
-  accent: "#6aa0ff",
-  danger: "#e0a0a0",
+  text: "var(--ink)",
+  text2: "var(--ink-2)",
+  muted: "var(--muted)",
+  faint: "var(--faint)",
+  line: "var(--line)",
+  field: "var(--panel)",
+  active: "var(--accent-soft)",
+  accent: "var(--accent)",
+  online: "var(--online)",
+  danger: "var(--due)",
 };
 
-export const line = `1px solid ${color.line}`;
+export const line = `1px solid var(--line)`;
 
-// Unified app typeface: Pretendard (bundled via the `pretendard` package, imported
-// once in main.tsx). System fonts are fallbacks while the woff2 loads / if absent.
+// Unified app typeface (also set on body in styles.css; kept for inline use).
 export const font = '"Pretendard Variable", Pretendard, system-ui, "Segoe UI", "Malgun Gothic", sans-serif';
 
-// Shared layout/element styles.
-export const pane: CSSProperties = { padding: 14, boxSizing: "border-box", overflow: "auto" };
-export const field: CSSProperties = {
-  padding: 8,
-  background: color.field,
-  color: color.text,
-  border: line,
-  borderRadius: 4,
-};
-export const muted: CSSProperties = { opacity: 0.6 };
-export const th: CSSProperties = { padding: "6px 8px" };
-export const td: CSSProperties = { padding: "6px 8px" };
-export const kbd: CSSProperties = { opacity: 0.4, fontSize: 11 };
+// Inner padding for a panel's scrollable content area.
+export const pane: CSSProperties = { padding: 18, boxSizing: "border-box", overflow: "auto" };
 
-export function navButton(active: boolean): CSSProperties {
-  return {
-    display: "flex",
-    justifyContent: "space-between",
-    width: "100%",
-    textAlign: "left",
-    padding: "6px 8px",
-    marginBottom: 4,
-    background: active ? color.active : "transparent",
-    color: color.text,
-    border: "none",
-    borderRadius: 4,
-    cursor: "pointer",
-  };
-}
+// Inline mirror of the .field class, for panes that spread it onto inputs.
+export const field: CSSProperties = {
+  background: "var(--panel)",
+  color: "var(--ink)",
+  border: "1px solid var(--line-2)",
+  borderRadius: "var(--radius-ctl)",
+  padding: "8px 11px",
+  fontSize: 13,
+};
+
+export const muted: CSSProperties = { color: "var(--muted-2)" };
 
 // One-line ellipsis truncation for tight grid cells.
 export function ellipsis(maxWidth: number): CSSProperties {
