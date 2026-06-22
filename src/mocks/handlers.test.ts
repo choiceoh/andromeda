@@ -13,10 +13,12 @@ describe("mock gateway handlers", () => {
     expect(await ping(cfg)).toMatchObject({ ok: true, version: "mock" });
   });
 
-  it("lists todos through the RPC envelope", async () => {
-    const todos = await callRpc<{ title: string }[]>(cfg, "miniapp.todo.list");
-    expect(todos.length).toBeGreaterThan(0);
-    expect(todos[0]).toHaveProperty("title");
+  it("lists todos through the RPC envelope (rows wrapped under a payload key)", async () => {
+    // The gateway wraps lists as { todos: [...] }; callRpc returns the raw
+    // payload and the data provider is what unwraps it (see dataProvider.test).
+    const payload = await callRpc<{ todos: { title: string }[] }>(cfg, "miniapp.todo.list");
+    expect(payload.todos.length).toBeGreaterThan(0);
+    expect(payload.todos[0]).toHaveProperty("title");
   });
 
   it("surfaces unknown methods as an envelope error", async () => {

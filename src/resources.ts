@@ -8,6 +8,10 @@ export interface ResourceDef {
   name: string;
   label: string;
   list: string;
+  // Payload key wrapping the row array: gateway list RPCs return
+  // { <listKey>: [...] } (+ pagination/meta fields), not a bare array. The data
+  // provider unwraps by this key. Omit only when the RPC returns a bare array.
+  listKey?: string;
   get?: string; // dedicated single-record read (else getOne falls back to list+find)
   create?: string;
   update?: string;
@@ -19,6 +23,7 @@ export const RESOURCE_DEFS: ResourceDef[] = [
     name: "todo",
     label: "할일",
     list: "miniapp.todo.list",
+    listKey: "todos",
     create: "miniapp.todo.create",
     update: "miniapp.todo.update",
     remove: "miniapp.todo.delete",
@@ -29,6 +34,7 @@ export const RESOURCE_DEFS: ResourceDef[] = [
     name: "mail",
     label: "메일",
     list: "miniapp.gmail.list_recent",
+    listKey: "messages",
     get: "miniapp.gmail.get",
     remove: "miniapp.gmail.trash",
   },
@@ -36,22 +42,24 @@ export const RESOURCE_DEFS: ResourceDef[] = [
     name: "calendar",
     label: "일정",
     list: "miniapp.calendar.list_upcoming",
+    listKey: "events",
     get: "miniapp.calendar.get",
     create: "miniapp.calendar.create",
     update: "miniapp.calendar.update",
     remove: "miniapp.calendar.delete",
   },
   // Read-mostly resources — parameterless lists flow straight into a grid.
-  { name: "people", label: "연락처", list: "miniapp.people.list" },
+  { name: "people", label: "연락처", list: "miniapp.people.list", listKey: "people" },
   {
     name: "crons",
     label: "크론",
     list: "miniapp.crons.list",
+    listKey: "jobs",
     get: "miniapp.crons.get",
     update: "miniapp.crons.update",
     remove: "miniapp.crons.remove",
   },
-  { name: "workfeed", label: "작업피드", list: "miniapp.workfeed.list" },
+  { name: "workfeed", label: "작업피드", list: "miniapp.workfeed.list", listKey: "items" },
 ];
 
 // memory(위키) and search are NOT in the CRUD registry: their reads are
