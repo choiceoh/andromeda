@@ -6,16 +6,21 @@ name: Release
 # pick a tag in the "Run workflow" dropdown for correct naming).
 #
 # Before tagging, bump the version in all three places so bundle filenames match
-# the tag (Tauri stamps versions from tauri.conf.json):
+# the tag (Tauri stamps versions from tauri.conf.json). Use `pnpm bump <version>`
+# to write all three at once:
 #   - package.json            "version"
 #   - src-tauri/tauri.conf.json "version"
 #   - src-tauri/Cargo.toml     [package] version
 #
-# Builds are UNSIGNED by default (works with zero secrets). First-launch OS warnings:
+# Auto-update REQUIRES two repo secrets (TAURI_SIGNING_PRIVATE_KEY[_PASSWORD]) — the
+# minisign key that signs the bundles + latest.json. They're already set; see the
+# `env:` block below.
+#
+# Builds are NOT OS-code-signed (no Authenticode / Apple notarization), so first-launch
+# warnings remain:
 #   - macOS: right-click → Open, or `xattr -dr com.apple.quarantine /Applications/Andromeda.app`
 #   - Windows: SmartScreen → More info → Run anyway
-# To enable signing/notarization later, set the secrets referenced in the commented
-# `env:` block on the "Build and release" step below.
+# To enable OS signing/notarization later, set the secrets in the commented block below.
 
 on:
   push:
@@ -74,6 +79,12 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # --- Updater signing (REQUIRED for auto-update) ---
+          # Signs the bundles + latest.json with the minisign key whose public half
+          # lives in tauri.conf.json > plugins.updater.pubkey. Without these the
+          # updater rejects every download. Set via: gh secret set TAURI_SIGNING_PRIVATE_KEY
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # --- macOS signing & notarization (optional; add as repo secrets to enable) ---
           # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -93,6 +104,9 @@ jobs:
             서명되지 않은 빌드라 첫 실행 시 OS 경고가 날 수 있습니다.
             - macOS: 우클릭 → 열기, 또는 `xattr -dr com.apple.quarantine /Applications/Andromeda.app`
             - Windows: SmartScreen → 추가 정보 → 실행
-          releaseDraft: true
+          # Publish immediately (not a draft): the updater endpoint
+          # releases/latest/download/latest.json only resolves for a published,
+          # non-prerelease "latest" release.
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

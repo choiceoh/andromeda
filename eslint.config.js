@@ -30,5 +30,10 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
+  {
+    // Build tooling runs in Node (ESM). Give it Node globals so no-undef passes.
+    files: ["scripts/**/*.{js,mjs}"],
+    languageOptions: { globals: { ...globals.node } },
+  },
   prettier,
 );
