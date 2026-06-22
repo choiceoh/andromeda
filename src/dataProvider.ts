@@ -2,6 +2,21 @@ import type { DataProvider } from "@refinedev/core";
 import { type GatewayConfig, callRpc } from "./gateway";
 import { resourceDef } from "./resources";
 
+// Gateway list RPCs wrap the rows in a payload object keyed by the resource
+// (e.g. { people: [...] }, { todos: [...] }, { items: [...] }) alongside
+// pagination/meta fields — NOT a bare array. Unwrap by the registry's listKey,
+// falling back to the sole array-valued property so a resource works before its
+// key is declared, and still accepting a bare array (the mock gateway shape).
+function unwrapRows(payload: unknown, listKey?: string): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (listKey && Array.isArray(obj[listKey])) return obj[listKey] as any[];
+    for (const v of Object.values(obj)) if (Array.isArray(v)) return v as any[];
+  }
+  return [];
+}
+
 // Deneb-backed Refine data provider. Resource↔RPC wiring lives in resources.ts;
 // this file is just the generic glue from Refine's CRUD contract to callRpc().
 //
@@ -13,9 +28,12 @@ export function denebDataProvider(cfg: GatewayConfig): DataProvider {
     getApiUrl: () => cfg.url,
 
     getList: async ({ resource }) => {
-      const rows = await callRpc<any[]>(cfg, resourceDef(resource).list, {});
-      const data = Array.isArray(rows) ? rows : [];
-      return { data, total: data.length };
+      const def = resourceDef(resource);
+      const payload = await callRpc<unknown>(cfg, def.list, {});
+      const data = unwrapRows(payload, def.listKey);
+      const meta = payload as Record<string, unknown> | null;
+      const total = meta && typeof meta.total === "number" ? meta.total : data.length;
+      return { data, total };
     },
 
     getOne: async ({ resource, id }) => {
@@ -25,8 +43,8 @@ export function denebDataProvider(cfg: GatewayConfig): DataProvider {
         const data = await callRpc<any>(cfg, m.get, { id });
         return { data: data ?? { id } };
       }
-      const rows = await callRpc<any[]>(cfg, m.list, {});
-      const found = (rows ?? []).find((r) => String(r.id) === String(id));
+      const payload = await callRpc<unknown>(cfg, m.list, {});
+      const found = unwrapRows(payload, m.listKey).find((r) => String(r.id) === String(id));
       return { data: found ?? { id } };
     },
 

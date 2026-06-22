@@ -17,22 +17,25 @@ const fail = (message: string) => HttpResponse.json({ ok: false, error: { code: 
 const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.ping": () => ({ ok: true, version: "mock", model: "mock-model", tsMs: Date.now() }),
 
-  "miniapp.todo.list": () => fx.todos,
+  // List RPCs wrap their rows in a payload object keyed by the resource (+ meta),
+  // mirroring the real gateway — NOT a bare array. The data provider unwraps via
+  // resources.ts listKey; keeping the mock wrapped stops it from masking shape bugs.
+  "miniapp.todo.list": () => ({ todos: fx.todos }),
   "miniapp.todo.create": (p) => ({ id: `t${Date.now()}`, title: p.title, done: false }),
   "miniapp.todo.update": (p) => ({ ...p }),
   "miniapp.todo.set_done": (p) => ({ id: p.id, done: p.done }),
   "miniapp.todo.delete": (p) => ({ id: p.id }),
 
-  "miniapp.gmail.list_recent": () => fx.mail,
+  "miniapp.gmail.list_recent": () => ({ messages: fx.mail, nextPageToken: "" }),
   "miniapp.gmail.get": (p) => fx.mail.find((m) => String(m.id) === String(p.id)) ?? null,
   "miniapp.gmail.trash": (p) => ({ id: p.id }),
 
-  "miniapp.calendar.list_upcoming": () => fx.events,
+  "miniapp.calendar.list_upcoming": () => ({ events: fx.events }),
   "miniapp.calendar.get": (p) => fx.events.find((e) => String(e.id) === String(p.id)) ?? null,
 
-  "miniapp.people.list": () => fx.people,
-  "miniapp.crons.list": () => fx.crons,
-  "miniapp.workfeed.list": () => fx.workfeed,
+  "miniapp.people.list": () => ({ people: fx.people, windowDays: 30, scannedCount: fx.people.length }),
+  "miniapp.crons.list": () => ({ jobs: fx.crons, total: fx.crons.length }),
+  "miniapp.workfeed.list": () => ({ count: fx.workfeed.length, items: fx.workfeed, total: fx.workfeed.length }),
 
   "miniapp.memory.search": () => fx.pages,
   "miniapp.memory.get_page": (p) => ({ path: p.path, content: `# ${p.path}\n\n목 위키 내용입니다.` }),
