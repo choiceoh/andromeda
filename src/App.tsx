@@ -5,6 +5,7 @@ import { denebDataProvider } from "./dataProvider";
 import { denebAuthProvider } from "./authProvider";
 import { refineResources } from "./resources";
 import { readDesktopToken } from "./tauri";
+import { checkForUpdates } from "./updater";
 import { WorkspaceProvider } from "./workspaceContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Workstation } from "./components/Workstation";
@@ -17,6 +18,12 @@ export function App() {
   const dataProvider = useMemo(() => denebDataProvider(cfg), [cfg]);
   const authProvider = useMemo(() => denebAuthProvider(cfg), [cfg]);
   const connected = Boolean(cfg.url && cfg.token);
+
+  // Desktop auto-update: check GitHub Releases for a newer signed build on launch.
+  // No-op on the web build; failures are swallowed so they never block startup.
+  useEffect(() => {
+    void checkForUpdates();
+  }, []);
 
   // Desktop auto-connect: if we have no token yet, pull it from the OS keychain /
   // ~/.deneb/client_token so the live gateway connects without manual entry.
