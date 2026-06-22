@@ -14,6 +14,10 @@ export const color = {
 
 export const line = `1px solid ${color.line}`;
 
+// Unified app typeface: Pretendard (bundled via the `pretendard` package, imported
+// once in main.tsx). System fonts are fallbacks while the woff2 loads / if absent.
+export const font = '"Pretendard Variable", Pretendard, system-ui, "Segoe UI", "Malgun Gothic", sans-serif';
+
 // Shared layout/element styles.
 export const pane: CSSProperties = { padding: 14, boxSizing: "border-box", overflow: "auto" };
 export const field: CSSProperties = {

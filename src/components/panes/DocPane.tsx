@@ -1,4 +1,4 @@
-import { field } from "@/theme";
+import { field, font } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // Client-only scratch document. Its text lives in the workspace context so it
@@ -21,7 +21,7 @@ export function DocPane() {
           height: "70vh",
           boxSizing: "border-box",
           resize: "none",
-          fontFamily: "ui-monospace, monospace",
+          fontFamily: font,
           fontSize: 13,
           lineHeight: 1.5,
         }}
