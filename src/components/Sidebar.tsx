@@ -1,14 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { type GatewayConfig, saveConfig } from "@/gateway";
 import { useGatewayStatus } from "@/hooks";
-import { color, field, kbd, line, navButton, pane } from "@/theme";
 import { useWorkspace } from "@/workspaceContext";
+import { Icon } from "./Icon";
 import { PANES } from "./panes";
 
-// Left column: registry-driven navigation + the gateway connection form.
+// Slim nav rail: registry-driven icon tabs (the active one lifts like a Zen tab)
+// + a connection status dot. The gateway URL/token form is tucked into a popover
+// off the status dot so the rail stays narrow — on the real host it auto-connects
+// from the keychain anyway, so the form is rarely needed.
 export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayConfig) => void }) {
   const { connected, view, setView } = useWorkspace();
   const { status, check } = useGatewayStatus(cfg);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (connected) void check();
@@ -16,42 +20,93 @@ export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: Gatew
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const host = cfg.url ? cfg.url.replace(/^https?:\/\//, "").replace(/\/+$/, "") : "연결";
+  const isError = status.startsWith("오류");
+
   return (
-    <nav style={{ ...pane, borderRight: line, display: "flex", flexDirection: "column" }}>
-      <h3 style={{ margin: "2px 0 12px" }}>Andromeda</h3>
-      {PANES.map((p) => (
-        <button key={p.key} style={navButton(view === p.key)} onClick={() => setView(p.key)}>
-          <span>{p.label}</span>
-          <span style={kbd}>⌘{p.shortcut}</span>
+    <nav
+      style={{
+        width: "var(--rail-w)",
+        flex: "0 0 auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        padding: "2px 2px",
+        position: "relative",
+      }}
+    >
+      {PANES.map((p, i) => (
+        <button
+          key={p.key}
+          className={"nav-item fade-up" + (view === p.key ? " active" : "")}
+          style={{ animationDelay: `${i * 26}ms` }}
+          onClick={() => setView(p.key)}
+          title={p.label}
+        >
+          <span className="ico">
+            <Icon name={p.key} />
+          </span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.label}</span>
         </button>
       ))}
-      <div style={{ opacity: 0.45, fontSize: 12, marginTop: 8 }}>캡처 OCR·ASR (다음)</div>
 
-      <div style={{ marginTop: "auto", paddingTop: 12, borderTop: line, display: "grid", gap: 6 }}>
-        <input
-          placeholder="게이트웨이 URL"
-          value={cfg.url}
-          onChange={(e) => setCfg({ ...cfg, url: e.target.value })}
-          style={{ ...field, fontSize: 12 }}
-        />
-        <input
-          placeholder="클라이언트 토큰"
-          value={cfg.token}
-          onChange={(e) => setCfg({ ...cfg, token: e.target.value })}
-          style={{ ...field, fontSize: 12 }}
-        />
+      <div style={{ marginTop: "auto", paddingTop: 8 }}>
         <button
-          onClick={() => {
-            saveConfig(cfg);
-            void check();
-          }}
-          style={{ padding: "6px 10px" }}
+          className="nav-item"
+          onClick={() => setOpen((o) => !o)}
+          style={{ fontSize: 11, color: "var(--muted-2)" }}
+          title="게이트웨이 연결"
         >
-          연결
+          <span
+            className={"live-dot" + (connected ? " pulse" : "")}
+            style={{ background: connected ? "var(--online)" : "var(--faint)" }}
+          />
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {connected ? host : "연결"}
+          </span>
         </button>
-        <span style={{ fontSize: 12, opacity: 0.7, color: status.startsWith("오류") ? color.danger : undefined }}>
-          {status}
-        </span>
+
+        {open && (
+          <div
+            className="panel"
+            style={{
+              position: "absolute",
+              left: 0,
+              bottom: 46,
+              width: 248,
+              padding: 13,
+              display: "grid",
+              gap: 7,
+              zIndex: 30,
+            }}
+          >
+            <div className="micro" style={{ marginBottom: 1 }}>
+              게이트웨이
+            </div>
+            <input
+              className="field"
+              placeholder="게이트웨이 URL"
+              value={cfg.url}
+              onChange={(e) => setCfg({ ...cfg, url: e.target.value })}
+            />
+            <input
+              className="field"
+              placeholder="클라이언트 토큰"
+              value={cfg.token}
+              onChange={(e) => setCfg({ ...cfg, token: e.target.value })}
+            />
+            <button
+              className="btn btn-accent"
+              onClick={() => {
+                saveConfig(cfg);
+                void check();
+              }}
+            >
+              연결
+            </button>
+            {status && <span style={{ fontSize: 12, color: isError ? "var(--due)" : "var(--muted)" }}>{status}</span>}
+          </div>
+        )}
       </div>
     </nav>
   );
