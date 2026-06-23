@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { callRpc } from "@/gateway";
 import { SEARCH_RPC } from "@/resources";
 import type { SearchHit } from "@/types";
-import { errText } from "@/format";
+import { useRpc } from "@/useRpc";
 import { line } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
@@ -31,7 +30,7 @@ export function SearchPane() {
   const { connected, cfg, openWiki } = useWorkspace();
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
-  const [status, setStatus] = useState("");
+  const { call, status, setStatus } = useRpc(cfg);
 
   const aiText = hits.length
     ? `[검색 "${q}" — ${hits.length}건]\n` +
@@ -44,16 +43,14 @@ export function SearchPane() {
   async function run() {
     const query = q.trim();
     if (!query || !connected) return;
-    setStatus("검색 중…");
-    try {
-      const res = await callRpc<SearchAllResult | SearchHit[]>(cfg, SEARCH_RPC, { query });
-      const list = flatten(res);
-      setHits(list);
-      setStatus(list.length ? "" : "결과 없음");
-    } catch (e) {
+    const r = await call<SearchAllResult | SearchHit[]>(SEARCH_RPC, { query }, "검색 중…");
+    if (!r.ok) {
       setHits([]);
-      setStatus(`오류: ${errText(e)}`);
+      return;
     }
+    const list = flatten(r.data);
+    setHits(list);
+    setStatus(list.length ? "" : "결과 없음");
   }
 
   return (
