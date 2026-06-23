@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as fx from "@/mocks/fixtures";
 import { renderWithProviders } from "@/test/util";
@@ -79,8 +79,22 @@ describe("WikiPane", () => {
     await userEvent.type(screen.getByPlaceholderText(/projects\/andromeda/), "projects/new");
     await userEvent.click(screen.getByRole("button", { name: "생성" }));
 
-    // create_page carries the path; then the editor opens that page (h2 shows it).
+    // create_page carries the path; then the editor opens that page (heading shows it).
     expect(await screen.findByRole("heading", { name: "projects/new" })).toBeInTheDocument();
     expect(createParams).toMatchObject({ path: "projects/new" });
+  });
+
+  it("toggles a Markdown preview of the page body", async () => {
+    renderWithProviders(<WikiPane />, { connected: true });
+
+    await userEvent.type(screen.getByPlaceholderText("위키 검색…"), "설계{enter}");
+    await userEvent.click(await screen.findByRole("button", { name: /Andromeda 설계 노트/ }));
+    await screen.findByDisplayValue(/본문 내용입니다/); // editor visible by default (edit mode)
+
+    await userEvent.click(screen.getByRole("button", { name: "미리보기" }));
+    const preview = screen.getByLabelText("위키 미리보기");
+    // body "# 설계\n\n본문 내용입니다." renders as a heading + paragraph
+    expect(within(preview).getByRole("heading", { name: "설계" })).toBeInTheDocument();
+    expect(within(preview).getByText(/본문 내용입니다/)).toBeInTheDocument();
   });
 });

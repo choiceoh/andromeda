@@ -6,6 +6,7 @@ import { errText } from "@/format";
 import { color, font, line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Field, Modal } from "@/components/Modal";
+import { Markdown } from "@/components/Markdown";
 
 // Wiki editor over memory.* — search pages, open one into the editor, save back,
 // and create new pages. Query-driven (memory.search/get_page/write_page/create_page),
@@ -19,6 +20,7 @@ export function WikiPane() {
   const [content, setContent] = useState("");
   const [status, setStatus] = useState("");
   const [creating, setCreating] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   useRegisterPane(undefined, content.trim() ? `[위키${path ? ` ${path}` : ""}]\n${content}` : "");
 
@@ -143,6 +145,14 @@ export function WikiPane() {
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <h3 style={{ margin: 0 }}>{path ?? "위키"}</h3>
           <button
+            className="btn"
+            onClick={() => setPreview((p) => !p)}
+            disabled={!path}
+            style={{ padding: "5px 12px", fontSize: 12 }}
+          >
+            {preview ? "편집" : "미리보기"}
+          </button>
+          <button
             className="btn btn-accent"
             onClick={() => void save()}
             disabled={!path}
@@ -152,20 +162,26 @@ export function WikiPane() {
           </button>
           {status && <span className="pane-status">{status}</span>}
         </div>
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          disabled={!path}
-          placeholder={path ? "" : "왼쪽에서 페이지를 선택하면 편집할 수 있습니다."}
-          className="field"
-          style={{
-            flex: 1,
-            resize: "none",
-            fontFamily: font,
-            fontSize: 13,
-            lineHeight: 1.5,
-          }}
-        />
+        {preview ? (
+          <div className="md-surface" style={{ flex: 1, overflow: "auto", minHeight: 0 }} aria-label="위키 미리보기">
+            <Markdown text={content} />
+          </div>
+        ) : (
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            disabled={!path}
+            placeholder={path ? "" : "왼쪽에서 페이지를 선택하면 편집할 수 있습니다."}
+            className="field"
+            style={{
+              flex: 1,
+              resize: "none",
+              fontFamily: font,
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          />
+        )}
       </div>
       {creating && <NewPageModal onClose={() => setCreating(false)} onCreate={(p) => void createNewPage(p)} />}
     </div>

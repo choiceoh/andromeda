@@ -105,14 +105,115 @@ export interface PingResult {
 
 export const ping = (cfg: GatewayConfig) => callRpc<PingResult>(cfg, "miniapp.ping");
 
+// --- Models (miniapp.models.*) — the AI panel's model/service picker ---
+
+// One selectable model. Mirrors handlerminiapp.ModelOption (models.go).
+export interface ModelOption {
+  id: string;
+  label: string;
+  provider?: string;
+  display?: string;
+  health?: string;
+  current?: boolean;
+  custom?: boolean;
+  deletable?: boolean;
+  unhealthy?: boolean;
+  note?: string; // server-rendered Korean tuner stat line
+}
+
+export interface ModelSection {
+  title: string;
+  models: ModelOption[];
+}
+
+export interface RoleModel {
+  role: string; // main | lightweight | fallback | …
+  model: string;
+}
+
+// miniapp.models.list payload — active model, per-role bindings, grouped sections.
+export interface ModelsList {
+  current: string;
+  roles: RoleModel[];
+  sections: ModelSection[];
+  advisories?: string[];
+  mainHasVision?: boolean;
+}
+
+export const listModels = (cfg: GatewayConfig) => callRpc<ModelsList>(cfg, "miniapp.models.list");
+
+// Bind a model to a role (default main) — persists the picker choice gateway-side.
+export const setModel = (cfg: GatewayConfig, id: string, role = "main") =>
+  callRpc<{ ok: boolean; role: string; current: string }>(cfg, "miniapp.models.set", { id, role });
+
+// --- Sessions (miniapp.sessions.*) — conversation history drawer ---
+
+// One recent conversation row. Mirrors handlerminiapp.sessionRowOut (sessions.go).
+export interface SessionRow {
+  key: string;
+  kind?: string;
+  status?: string;
+  channel?: string;
+  model?: string;
+  label?: string;
+  updatedAtMs?: number;
+  startedAtMs?: number;
+  runtimeMs?: number;
+  totalTokens?: number;
+}
+
+// One transcript message. Mirrors handlerminiapp.transcriptMsgOut (sessions.go).
+export interface TranscriptMsg {
+  id?: string;
+  role: string; // user | assistant | system | tool
+  content: string;
+  timestampMs?: number;
+}
+
+export const recentSessions = (cfg: GatewayConfig, limit = 20) =>
+  callRpc<{ sessions: SessionRow[]; count: number }>(cfg, "miniapp.sessions.recent", { limit }).then(
+    (r) => r.sessions ?? [],
+  );
+
+export const sessionTranscript = (cfg: GatewayConfig, sessionKey: string, limit = 60) =>
+  callRpc<{ sessionKey: string; messages: TranscriptMsg[]; total: number }>(cfg, "miniapp.sessions.transcript", {
+    sessionKey,
+    limit,
+  }).then((r) => r.messages ?? []);
+
+// Drop a dismissed conversation (the × in the session drawer). The gateway also
+// deletes its transcript so the row can't resurrect on the next restart.
+export const deleteSession = (cfg: GatewayConfig, sessionKey: string) =>
+  callRpc<{ deleted: boolean }>(cfg, "miniapp.sessions.delete", { sessionKey }).then((r) => Boolean(r.deleted));
+
 // --- Chat streaming over POST /api/v1/miniapp/chat/stream (SSE) ---
+
+// One tool lifecycle frame, parsed from the gateway's `tool` SSE event
+// (server_http_miniapp_stream.go toolStreamFrame). `started`→`completed` pairs
+// share a toolUseId so the panel can flip a running chip to its result.
+export interface ChatToolEvent {
+  state: string; // "started" | "completed"
+  tool: string;
+  toolUseId: string;
+  detail?: string;
+  isError?: boolean;
+}
 
 export interface ChatHandlers {
   onDelta?: (text: string) => void;
-  onTool?: (ev: unknown) => void;
+  onTool?: (ev: ChatToolEvent) => void;
   onThinking?: (preview: string) => void;
-  onDone?: (final: { text: string; model?: string }) => void;
+  onDone?: (final: { text: string; model?: string; fellBack?: boolean }) => void;
   onError?: (err: string) => void;
+}
+
+export interface ChatStreamOpts {
+  sessionKey?: string;
+  workspaceContext?: string;
+  // Per-turn model override (the picker's selection). Empty → gateway's main model.
+  model?: string;
+  // Aborts the in-flight turn when the user hits Stop.
+  signal?: AbortSignal;
 }
 
 // Minimal SSE parser matching the gateway frame format:
@@ -122,9 +223,9 @@ export async function chatStream(
   cfg: GatewayConfig,
   message: string,
   handlers: ChatHandlers,
-  sessionKey = "client:main",
-  workspaceContext?: string,
+  opts: ChatStreamOpts = {},
 ): Promise<void> {
+  const { sessionKey = "client:main", workspaceContext, model, signal } = opts;
   // Inject the current work-area content as a USER-message prefix (never system),
   // so Deneb's AI can read what you're working on.
   //
@@ -141,11 +242,14 @@ export async function chatStream(
   const composed = workspaceContext?.trim()
     ? `[작업 영역 — 현재 내용]\n${workspaceContext}\n\n[요청]\n${message}`
     : message;
-  chatLog.debug(`→ stream (session ${sessionKey}, +context ${Boolean(workspaceContext?.trim())})`);
+  chatLog.debug(
+    `→ stream (session ${sessionKey}, model ${model || "main"}, +context ${Boolean(workspaceContext?.trim())})`,
+  );
   const res = await gatewayFetch(`${base(cfg.url)}/api/v1/miniapp/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", [TOKEN_HEADER]: cfg.token },
-    body: JSON.stringify({ message: composed, sessionKey }),
+    body: JSON.stringify(model ? { message: composed, sessionKey, model } : { message: composed, sessionKey }),
+    signal,
   });
   if (!res.ok) {
     chatLog.error(`✗ stream: HTTP ${res.status}`);
@@ -161,7 +265,15 @@ export async function chatStream(
           if (typeof obj.delta === "string") handlers.onDelta?.(obj.delta);
           break;
         case "tool":
-          handlers.onTool?.(obj);
+          if (typeof obj.tool === "string" && obj.tool) {
+            handlers.onTool?.({
+              state: typeof obj.state === "string" ? obj.state : "",
+              tool: obj.tool,
+              toolUseId: typeof obj.toolUseId === "string" ? obj.toolUseId : "",
+              detail: typeof obj.detail === "string" ? obj.detail : undefined,
+              isError: obj.isError === true,
+            });
+          }
           break;
         case "thinking":
           if (typeof obj.preview === "string") handlers.onThinking?.(obj.preview);
@@ -170,6 +282,7 @@ export async function chatStream(
           handlers.onDone?.({
             text: typeof obj.text === "string" ? obj.text : "",
             model: typeof obj.model === "string" ? obj.model : undefined,
+            fellBack: obj.fellBack === true,
           });
           break;
         case "error":

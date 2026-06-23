@@ -1,24 +1,53 @@
 // Reusable stateful hooks: the AI chat stream machine, gateway health check, and
 // the proactive events subscription.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useInvalidate } from "@refinedev/core";
-import { type GatewayConfig, chatStream, ping } from "./gateway";
+import { type ChatToolEvent, type GatewayConfig, chatStream, ping } from "./gateway";
 import { type ProactiveEvent, subscribeEvents } from "./events";
 
-export interface ChatState {
-  out: string;
-  thinking: string;
-  busy: boolean;
-  turns: ChatTurn[];
-  clear: () => void;
-  send: (message: string, workspaceContext: string, activeResource?: string) => Promise<void>;
+// An assistant reply is an ordered list of text segments and tool chips, so a
+// tool call rendered mid-reply keeps its place in the prose (text → tool → text).
+export interface TextPart {
+  kind: "text";
+  text: string;
 }
+export interface ToolPart {
+  kind: "tool";
+  id: string;
+  tool: string;
+  state: string; // "started" | "completed"
+  detail?: string;
+  isError?: boolean;
+}
+export type AssistantPart = TextPart | ToolPart;
 
 export interface ChatTurn {
   id: string;
   role: "user" | "assistant";
+  // user: the message as typed; assistant: the accumulated plain text (used for
+  // copy, regenerate, and as the canonical body for transcript-loaded turns).
   text: string;
-  status: "done" | "streaming" | "error";
+  parts?: AssistantPart[]; // assistant turns only; live-streamed segments
+  status: "done" | "streaming" | "error" | "stopped";
+  model?: string;
+}
+
+export interface SendOpts {
+  workspaceContext?: string;
+  activeResource?: string;
+  model?: string;
+  sessionKey?: string;
+}
+
+export interface ChatState {
+  thinking: string;
+  busy: boolean;
+  turns: ChatTurn[];
+  send: (message: string, opts?: SendOpts) => Promise<void>;
+  stop: () => void;
+  regenerate: () => void;
+  clear: () => void;
+  setTurns: (turns: ChatTurn[]) => void;
 }
 
 function chatTurnId(): string {
@@ -27,90 +56,160 @@ function chatTurnId(): string {
     : `${Date.now()}-${Math.random()}`;
 }
 
-// Drives one Deneb chat/stream turn: streams delta/tool/thinking, and on done
+// Drives one Deneb chat/stream turn: streams delta into text parts, tool frames
+// into inline chips, supports Stop (abort) and Regenerate, and on done
 // invalidates the active resource so AI-driven data changes show in the grid.
 export function useChat(cfg: GatewayConfig): ChatState {
-  const [out, setOut] = useState("");
   const [thinking, setThinking] = useState("");
   const [busy, setBusy] = useState(false);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const invalidate = useInvalidate();
+  // The in-flight turn's abort handle (for Stop) and the last send args (for
+  // Regenerate). Refs, not state — changing them must not re-render.
+  const abortRef = useRef<AbortController | null>(null);
+  const lastSendRef = useRef<{ message: string; opts: SendOpts } | null>(null);
 
   function clear() {
     if (busy) return;
-    setOut("");
     setThinking("");
     setTurns([]);
+    lastSendRef.current = null;
   }
 
-  async function send(message: string, workspaceContext: string, activeResource?: string) {
+  function stop() {
+    abortRef.current?.abort();
+  }
+
+  function regenerate() {
+    const last = lastSendRef.current;
+    if (!last || busy) return;
+    // Replace the previous answer: drop the trailing assistant+user pair, then
+    // re-run the same message (send re-appends both).
+    setTurns((prev) => {
+      const copy = [...prev];
+      if (copy.at(-1)?.role === "assistant") copy.pop();
+      if (copy.at(-1)?.role === "user") copy.pop();
+      return copy;
+    });
+    void send(last.message, last.opts);
+  }
+
+  async function send(message: string, opts: SendOpts = {}) {
     const msg = message.trim();
     if (!msg || busy) return;
+    lastSendRef.current = { message: msg, opts };
     const assistantId = chatTurnId();
-    setOut("");
     setThinking("");
     setTurns((prev) => [
       ...prev,
       { id: chatTurnId(), role: "user", text: msg, status: "done" },
-      { id: assistantId, role: "assistant", text: "", status: "streaming" },
+      { id: assistantId, role: "assistant", text: "", parts: [], status: "streaming", model: opts.model },
     ]);
     setBusy(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
     let failed = false;
-    const patchAssistant = (update: (turn: ChatTurn) => ChatTurn) => {
+    let stopped = false;
+
+    const patch = (update: (turn: ChatTurn) => ChatTurn) => {
       setTurns((prev) => prev.map((turn) => (turn.id === assistantId ? update(turn) : turn)));
     };
-    const appendAssistant = (text: string) => {
-      patchAssistant((turn) => ({ ...turn, text: turn.text + text }));
-    };
+    // Append streamed text to the trailing text part, or open a new one after a tool.
+    const appendText = (t: string) =>
+      patch((turn) => {
+        const parts = [...(turn.parts ?? [])];
+        const last = parts.at(-1);
+        if (last?.kind === "text") parts[parts.length - 1] = { kind: "text", text: last.text + t };
+        else parts.push({ kind: "text", text: t });
+        return { ...turn, parts, text: turn.text + t };
+      });
+    // Insert a tool chip on `started`; flip it to its result on `completed` (same id).
+    const upsertTool = (ev: ChatToolEvent) =>
+      patch((turn) => {
+        const parts = [...(turn.parts ?? [])];
+        const idx = ev.toolUseId ? parts.findIndex((p) => p.kind === "tool" && p.id === ev.toolUseId) : -1;
+        const next: ToolPart = {
+          kind: "tool",
+          id: ev.toolUseId || `${ev.tool}-${parts.length}`,
+          tool: ev.tool,
+          state: ev.state || "started",
+          detail: ev.detail,
+          isError: ev.isError,
+        };
+        if (idx >= 0) parts[idx] = { ...(parts[idx] as ToolPart), ...next };
+        else parts.push(next);
+        return { ...turn, parts };
+      });
+
     try {
       await chatStream(
         cfg,
         msg,
         {
-          onThinking: (preview) => setThinking(preview.slice(0, 90)),
+          onThinking: (preview) => setThinking(preview.slice(0, 120)),
           onDelta: (t) => {
             setThinking("");
-            setOut((p) => p + t);
-            appendAssistant(t);
+            appendText(t);
           },
-          // Show the AI using tools — the visible half of two-way collaboration.
           onTool: (ev) => {
-            const e = ev as { state?: string; tool?: string };
-            if (e.state === "started" && e.tool) {
-              const line = `\n[도구: ${e.tool}]\n`;
-              setOut((p) => `${p}${line}`);
-              appendAssistant(line);
-            }
+            setThinking("");
+            upsertTool(ev);
           },
           // The AI may have changed back-end data via a tool — refresh the active grid.
           onDone: (final) => {
-            patchAssistant((turn) => ({ ...turn, text: turn.text || final.text, status: "done" }));
-            setOut((p) => p || final.text);
-            if (activeResource) invalidate({ resource: activeResource, invalidates: ["list"] });
+            patch((turn) => {
+              const hasText = (turn.parts ?? []).some((p) => p.kind === "text" && p.text.trim());
+              const parts = hasText ? turn.parts : [...(turn.parts ?? []), { kind: "text" as const, text: final.text }];
+              return {
+                ...turn,
+                parts,
+                text: turn.text || final.text,
+                model: final.model ?? turn.model,
+                status: "done",
+              };
+            });
+            if (opts.activeResource) invalidate({ resource: opts.activeResource, invalidates: ["list"] });
           },
           onError: (e) => {
             failed = true;
-            const line = `\n[오류] ${e}`;
-            setOut((p) => `${p}${line}`);
-            patchAssistant((turn) => ({ ...turn, text: `${turn.text}${line}`, status: "error" }));
+            patch((turn) => ({
+              ...turn,
+              parts: [...(turn.parts ?? []), { kind: "text" as const, text: `\n[오류] ${e}` }],
+              text: `${turn.text}\n[오류] ${e}`,
+              status: "error",
+            }));
           },
         },
-        "client:main",
-        workspaceContext,
+        {
+          sessionKey: opts.sessionKey,
+          workspaceContext: opts.workspaceContext,
+          model: opts.model,
+          signal: controller.signal,
+        },
       );
     } catch (e) {
-      failed = true;
-      const line = `[오류] ${(e as Error).message}`;
-      setOut(line);
-      patchAssistant((turn) => ({ ...turn, text: line, status: "error" }));
+      if (controller.signal.aborted) {
+        stopped = true;
+        patch((turn) => ({ ...turn, status: "stopped" }));
+      } else {
+        failed = true;
+        const line = `[오류] ${(e as Error).message}`;
+        patch((turn) => ({
+          ...turn,
+          parts: [...(turn.parts ?? []), { kind: "text" as const, text: turn.text ? `\n${line}` : line }],
+          text: turn.text ? `${turn.text}\n${line}` : line,
+          status: "error",
+        }));
+      }
     } finally {
       setThinking("");
-      if (!failed) patchAssistant((turn) => ({ ...turn, status: "done" }));
+      if (!failed && !stopped) patch((turn) => (turn.status === "streaming" ? { ...turn, status: "done" } : turn));
+      abortRef.current = null;
       setBusy(false);
     }
   }
 
-  return { out, thinking, busy, turns, clear, send };
+  return { thinking, busy, turns, send, stop, regenerate, clear, setTurns };
 }
 
 export interface GatewayStatus {

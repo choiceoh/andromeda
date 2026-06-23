@@ -2,6 +2,7 @@
 // stay honest as the types evolve. Field names mirror the gateway WIRE contract
 // (isUnread, due, nextRunAtMs, workfeed body/source/createdAtMs, …) — they're what
 // an agent (or a screenshot) sees when running against the mock.
+import type { ModelsList, SessionRow, TranscriptMsg } from "@/gateway";
 import type { CalEvent, Cron, Mail, Person, ProjectDigest, SearchHit, Todo, WikiPage, WorkItem } from "@/types";
 
 export const todos: Todo[] = [
@@ -154,6 +155,60 @@ export const pages: WikiPage[] = [
     score: 0.74,
   },
 ];
+
+// models.list — active model + per-role bindings + grouped picker sections.
+export const models: ModelsList = {
+  current: "anthropic/claude-opus-4-8",
+  roles: [{ role: "main", model: "anthropic/claude-opus-4-8" }],
+  sections: [
+    {
+      title: "Anthropic",
+      models: [
+        { id: "anthropic/claude-opus-4-8", label: "Claude Opus 4.8", provider: "anthropic", current: true },
+        { id: "anthropic/claude-sonnet-4-6", label: "Claude Sonnet 4.6", provider: "anthropic" },
+      ],
+    },
+    {
+      title: "로컬",
+      models: [{ id: "local/qwen3", label: "Qwen3 30B", provider: "vllm", note: "p95 1.2s · 캐시 88%" }],
+    },
+  ],
+  mainHasVision: true,
+};
+
+// sessions.recent — the conversation history drawer's rows.
+export const sessions: SessionRow[] = [
+  {
+    key: "client:main",
+    kind: "interactive",
+    status: "idle",
+    channel: "native",
+    model: "claude-opus-4-8",
+    label: "메인 대화",
+    updatedAtMs: 1782200000000,
+  },
+  {
+    key: "cron:morning-brief",
+    kind: "cron",
+    status: "done",
+    channel: "cron",
+    model: "claude-haiku-4-5",
+    label: "아침 브리핑",
+    updatedAtMs: 1782100000000,
+  },
+];
+
+// sessions.transcript — message history keyed by session.
+export const transcript: Record<string, TranscriptMsg[]> = {
+  "client:main": [
+    { role: "user", content: "오늘 일정 요약해줘", timestampMs: 1782199000000 },
+    {
+      role: "assistant",
+      content: "**오늘 일정**\n\n- 14:00 기획 리뷰 (회의실 A)\n- 종일 연차 1건",
+      timestampMs: 1782199500000,
+    },
+  ],
+};
 
 // search.all fans out to wiki / diary / people buckets (the gateway shape).
 export function searchAll(query: string): { wiki: SearchHit[]; diary: SearchHit[]; people: SearchHit[] } {

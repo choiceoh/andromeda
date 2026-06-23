@@ -65,6 +65,16 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.memory.create_page": (p) => ({ path: p.path, title: p.path, body: "" }),
 
   "miniapp.search.all": (p) => fx.searchAll(typeof p.query === "string" ? p.query : ""),
+
+  // Model picker + conversation history (AI panel).
+  "miniapp.models.list": () => fx.models,
+  "miniapp.models.set": (p) => ({ ok: true, role: p.role ?? "main", current: p.id }),
+  "miniapp.sessions.recent": () => ({ sessions: fx.sessions, count: fx.sessions.length }),
+  "miniapp.sessions.transcript": (p) => {
+    const messages = fx.transcript[String(p.sessionKey)] ?? [];
+    return { sessionKey: p.sessionKey, messages, total: messages.length };
+  },
+  "miniapp.sessions.delete": () => ({ deleted: true }),
 };
 
 function sse(frames: string[]) {
