@@ -90,13 +90,7 @@ export function CronsPane() {
       <h2 style={{ marginTop: 2 }}>크론</h2>
       {error && <p className="pane-error">오류: {error}</p>}
       <GridNotice query={query} count={crons.length} empty="크론이 없습니다.">
-        <Grid
-          columns={columns}
-          rows={crons}
-          getKey={(c) => String(c.id)}
-          maxWidth={840}
-          onRowClick={(c) => setSelected(c)}
-        />
+        <Grid columns={columns} rows={crons} getKey={(c) => String(c.id)} onRowClick={(c) => setSelected(c)} />
       </GridNotice>
       {selected && <CronDetail cron={selected} onClose={() => setSelected(null)} />}
     </>

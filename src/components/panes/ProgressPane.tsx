@@ -27,7 +27,7 @@ export function ProgressPane() {
     <>
       <h2 style={{ marginTop: 2 }}>프로젝트 진행상황</h2>
       <GridNotice query={query} count={digests.length} empty="진행 중인 프로젝트가 없습니다.">
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 720 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {digests.map((d, i) => (
             <DigestCard key={d.path || d.project || i} digest={d} index={i} onOpenWiki={openWiki} />
           ))}

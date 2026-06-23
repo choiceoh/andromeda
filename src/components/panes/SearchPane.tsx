@@ -78,7 +78,7 @@ export function SearchPane() {
         </button>
       </div>
       {status && <p className="pane-status">{status}</p>}
-      <div style={{ display: "grid", gap: 8, maxWidth: 760 }}>
+      <div style={{ display: "grid", gap: 8 }}>
         {hits.map((h, i) => {
           // Every bucket (위키/다이어리/인물) carries a memory page path → openable.
           const openable = Boolean(h.path);

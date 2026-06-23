@@ -237,7 +237,6 @@ export function CalendarPane() {
           columns={columns}
           rows={listEvents}
           getKey={(ev) => String(ev.id)}
-          maxWidth={780}
           onRowClick={(ev) => setSelectedEventId((id) => (id === String(ev.id) ? null : String(ev.id)))}
           isRowSelected={(ev) => selectedEventId === String(ev.id)}
         />
