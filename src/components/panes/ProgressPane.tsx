@@ -10,7 +10,7 @@ import { GridNotice } from "@/components/Grid";
 // newest-first; here we render them as scannable cards and project the whole
 // briefing to Deneb so "어느 프로젝트부터 챙길까?" can be answered in context.
 export function ProgressPane() {
-  const { connected } = useWorkspace();
+  const { connected, openWiki } = useWorkspace();
   const { result, query } = useCachedList<ProjectDigest>("progress", connected);
   const digests = result?.data ?? [];
 
@@ -32,7 +32,7 @@ export function ProgressPane() {
       <GridNotice query={query} count={digests.length} empty="진행 중인 프로젝트가 없습니다.">
         <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 720 }}>
           {digests.map((d, i) => (
-            <DigestCard key={d.path || d.project || i} digest={d} index={i} />
+            <DigestCard key={d.path || d.project || i} digest={d} index={i} onOpenWiki={openWiki} />
           ))}
         </div>
       </GridNotice>
@@ -40,19 +40,25 @@ export function ProgressPane() {
   );
 }
 
-function DigestCard({ digest, index }: { digest: ProjectDigest; index: number }) {
-  const { project, headline, bullets, due, updatedAtMs } = digest;
+function DigestCard({
+  digest,
+  index,
+  onOpenWiki,
+}: {
+  digest: ProjectDigest;
+  index: number;
+  onOpenWiki: (path: string) => void;
+}) {
+  const { project, headline, bullets, due, updatedAtMs, path } = digest;
   const updated = fmtDate(updatedAtMs);
-  return (
-    <section
-      className="fade-up"
-      style={{
-        border: "1px solid var(--line)",
-        borderRadius: "var(--radius-ctl)",
-        padding: "13px 15px",
-        animationDelay: `${index * 50}ms`,
-      }}
-    >
+  const cardStyle = {
+    border: "1px solid var(--line)",
+    borderRadius: "var(--radius-ctl)",
+    padding: "13px 15px",
+    animationDelay: `${index * 50}ms`,
+  };
+  const body = (
+    <>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
         <span style={{ fontWeight: 600, fontSize: 15, letterSpacing: "-0.01em", minWidth: 0 }}>{project}</span>
         {due && (
@@ -95,6 +101,31 @@ function DigestCard({ digest, index }: { digest: ProjectDigest; index: number })
         </ul>
       )}
       {updated && <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 9 }}>업데이트 {updated}</div>}
+    </>
+  );
+
+  return path ? (
+    <button
+      className="fade-up"
+      type="button"
+      onClick={() => onOpenWiki(path)}
+      title="위키 열기"
+      style={{
+        ...cardStyle,
+        display: "block",
+        width: "100%",
+        background: "transparent",
+        color: "inherit",
+        textAlign: "left",
+        fontFamily: "inherit",
+        cursor: "pointer",
+      }}
+    >
+      {body}
+    </button>
+  ) : (
+    <section className="fade-up" style={cardStyle}>
+      {body}
     </section>
   );
 }

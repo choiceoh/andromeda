@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCreate, useInvalidate, useUpdate } from "@refinedev/core";
 
 import type { CalEvent } from "@/types";
@@ -37,8 +37,14 @@ function visibleRangeForMonth(year: number, month0: number) {
   };
 }
 
+function parseDayKey(key?: string): Date | null {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(key ?? "");
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
 export function CalendarPane() {
-  const { connected } = useWorkspace();
+  const { connected, consumePaneTarget, paneTarget } = useWorkspace();
   const now = new Date();
   const todayKey = dayKey(now);
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
@@ -63,6 +69,21 @@ export function CalendarPane() {
   const { run, error, busy } = useAction(refreshCalendarData);
   // null = closed · {} = create · { ev } = open existing (editable when ev.local).
   const [edit, setEdit] = useState<{ ev?: CalEvent } | null>(null);
+
+  useEffect(() => {
+    if (paneTarget?.view !== "calendar") return;
+    const matchedEvent =
+      paneTarget.id !== undefined ? events.find((ev) => String(ev.id) === String(paneTarget.id)) : undefined;
+    const matchedKey = paneTarget.dayKey ?? (matchedEvent ? eventDayKeys(matchedEvent.start, matchedEvent.end)[0] : "");
+    const targetDate = parseDayKey(matchedKey);
+    if (matchedKey && targetDate) {
+      setCursor({ y: targetDate.getFullYear(), m: targetDate.getMonth() });
+      setSelectedDay(matchedKey);
+      consumePaneTarget();
+    } else if (!query.isLoading) {
+      consumePaneTarget();
+    }
+  }, [consumePaneTarget, events, paneTarget, query.isLoading]);
 
   // Place each event on every day it spans, so the month grid can look a day up.
   const eventsByDay = useMemo(() => {
