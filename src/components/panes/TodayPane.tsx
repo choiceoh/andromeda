@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { CalEvent, Mail, Todo, View, WorkItem } from "@/types";
+import type { CalEvent, Cron, Mail, Person, ProjectDigest, Todo, View, WorkItem } from "@/types";
 import { useCachedList } from "@/cachedList";
 import { calSpan, eventDayKeys, fmtDate, senderName } from "@/format";
 import { getJSON, setJSON } from "@/storage";
@@ -19,28 +19,39 @@ import { type PaneTarget, useRegisterPane, useWorkspace } from "@/workspaceConte
 
 const MAX = 6; // a briefing is a glance; the full list lives in each resource's own pane.
 
-// Stable section keys (== each brief's `view`), the customization axis.
-const SECTIONS = ["calendar", "mail", "todo", "workfeed"] as const;
+// The catalog of sections the dashboard can show (== each brief's `view`). Users
+// pick WHICH appear (and in what order) from the inline editor; the original four
+// show by default, the rest are opt-in.
+const SECTIONS = ["calendar", "mail", "todo", "workfeed", "progress", "people", "crons"] as const;
 type SectionKey = (typeof SECTIONS)[number];
 const SECTION_LABEL: Record<SectionKey, string> = {
   calendar: "일정",
   mail: "메일",
   todo: "할일",
   workfeed: "작업피드",
+  progress: "진행",
+  people: "연락처",
+  crons: "크론",
 };
+const DEFAULT_VISIBLE: SectionKey[] = ["calendar", "mail", "todo", "workfeed"];
 const TODAY_ORDER_KEY = "andromeda.todayOrder";
 const TODAY_HIDDEN_KEY = "andromeda.todayHidden";
 
 function validKeys(raw: unknown): SectionKey[] {
   return Array.isArray(raw) ? raw.filter((k): k is SectionKey => SECTIONS.includes(k as SectionKey)) : [];
 }
-// Saved order, with any new/missing sections appended in registry order.
+// Saved order, with any new/missing sections appended in catalog order.
 function readOrder(): SectionKey[] {
   const saved = validKeys(getJSON<unknown[]>(TODAY_ORDER_KEY));
   return [...saved, ...SECTIONS.filter((k) => !saved.includes(k))];
 }
 function readHidden(): SectionKey[] {
-  return validKeys(getJSON<unknown[]>(TODAY_HIDDEN_KEY));
+  const savedOrder = validKeys(getJSON<unknown[]>(TODAY_ORDER_KEY));
+  const savedHidden = validKeys(getJSON<unknown[]>(TODAY_HIDDEN_KEY));
+  // Sections never configured before (absent from the saved order) that aren't in
+  // the default-visible four start hidden — opt-in additions to the dashboard.
+  const fresh = SECTIONS.filter((k) => !savedOrder.includes(k) && !DEFAULT_VISIBLE.includes(k));
+  return [...new Set([...savedHidden, ...fresh])];
 }
 
 interface Brief {
@@ -103,6 +114,11 @@ export function TodayPane() {
   const mail = useCachedList<Mail>("mail", connected);
   const todo = useCachedList<Todo>("todo", connected);
   const work = useCachedList<WorkItem>("workfeed", connected);
+  // Opt-in sections fetch only while shown — hidden ones stay idle.
+  const visible = (k: SectionKey) => !hidden.includes(k);
+  const prog = useCachedList<ProjectDigest>("progress", connected && visible("progress"));
+  const ppl = useCachedList<Person>("people", connected && visible("people"));
+  const cron = useCachedList<Cron>("crons", connected && visible("crons"));
 
   const events = cal.result?.data ?? [];
   // Recent mail, unread first — robust if `isUnread` is absent (order is just preserved).
@@ -117,6 +133,9 @@ export function TodayPane() {
   };
   const todos = (todo.result?.data ?? []).filter((t) => !t.done).sort((a, b) => due(a.due) - due(b.due));
   const items = work.result?.data ?? [];
+  const digests = prog.result?.data ?? [];
+  const people = ppl.result?.data ?? [];
+  const crons = cron.result?.data ?? [];
   const now = Date.now();
 
   const briefs: Brief[] = [
@@ -175,6 +194,42 @@ export function TodayPane() {
         title: w.title ?? "(항목)",
         meta: w.source || undefined,
         target: { view: "workfeed", id: w.id },
+      })),
+    },
+    {
+      label: "진행",
+      icon: "progress",
+      view: "progress",
+      empty: "진행 중인 프로젝트 없음",
+      query: prog.query,
+      total: digests.length,
+      lines: digests.slice(0, MAX).map((d) => ({
+        title: d.project,
+        meta: d.headline || (d.due ? `마감 ${d.due}` : undefined),
+      })),
+    },
+    {
+      label: "연락처",
+      icon: "people",
+      view: "people",
+      empty: "연락처 없음",
+      query: ppl.query,
+      total: people.length,
+      lines: people.slice(0, MAX).map((p) => ({
+        title: p.name || p.email,
+        meta: p.lastSubject || p.wikiSummary || undefined,
+      })),
+    },
+    {
+      label: "크론",
+      icon: "crons",
+      view: "crons",
+      empty: "예약 작업 없음",
+      query: cron.query,
+      total: crons.length,
+      lines: crons.slice(0, MAX).map((c) => ({
+        title: c.name || "(작업)",
+        meta: c.schedule || undefined,
       })),
     },
   ];

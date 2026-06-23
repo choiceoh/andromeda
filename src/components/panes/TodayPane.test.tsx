@@ -123,4 +123,25 @@ describe("TodayPane (오늘 대시보드)", () => {
     expect(screen.queryByText(/예산 검토/)).not.toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem("andromeda.todayHidden") ?? "[]")).toContain("mail");
   });
+
+  it("treats extra sections as opt-in — hidden until chosen in the editor", async () => {
+    const dataProvider = fakeProvider({
+      calendar: [{ id: "c1", title: "스탠드업", start: { dateTime: "2026-06-18T09:00:00" } }],
+      progress: [{ project: "안드로메다", headline: "패널 정합 완료" }],
+    });
+    renderWithProviders(<TodayPane />, { connected: true, dataProvider });
+
+    // The default four show; 진행 is opt-in, so its content stays hidden initially.
+    expect(await screen.findByText(/스탠드업/)).toBeInTheDocument();
+    expect(screen.queryByText(/패널 정합 완료/)).not.toBeInTheDocument();
+
+    // Turn 진행 on from the editor → its card and content appear, and the choice persists.
+    await userEvent.click(screen.getByRole("button", { name: "편집" }));
+    const progressToggle = screen.getByRole("checkbox", { name: "진행" });
+    expect(progressToggle).not.toBeChecked();
+    await userEvent.click(progressToggle);
+
+    expect(await screen.findByText(/패널 정합 완료/)).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("andromeda.todayHidden") ?? "[]")).not.toContain("progress");
+  });
 });
