@@ -16,6 +16,7 @@ import {
 } from "@/gateway";
 import type { Mail, MailAttachment } from "@/types";
 import { errText, firstString, fmtMailDate, senderName, text } from "@/format";
+import { stripMailChrome } from "@/mailChrome";
 import { useWorkspace } from "@/workspaceContext";
 import { Markdown } from "@/components/Markdown";
 
@@ -24,10 +25,10 @@ import { Markdown } from "@/components/Markdown";
 export function mailBody(mail?: Mail): string {
   if (!mail) return "";
   const body = firstString(mail, ["body", "plain", "plainText", "bodyText", "text", "message", "content"]);
-  if (body) return body;
+  if (body) return stripMailChrome(body);
   if (mail.snippet) return mail.snippet;
   const html = firstString(mail, ["html"]);
-  return html ? htmlToText(html) : "";
+  return html ? stripMailChrome(htmlToText(html)) : "";
 }
 
 function htmlToText(html: string): string {
