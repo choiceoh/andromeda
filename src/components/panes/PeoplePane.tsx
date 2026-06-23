@@ -62,7 +62,6 @@ export function PeoplePane() {
           columns={columns}
           rows={people}
           getKey={(p) => p.email || String(p.id ?? "")}
-          maxWidth={820}
           onRowClick={(p) => setSelected(p)}
         />
       </GridNotice>

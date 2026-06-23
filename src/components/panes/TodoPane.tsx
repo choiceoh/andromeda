@@ -10,18 +10,17 @@ import { Field, Modal } from "@/components/Modal";
 
 export function TodoPane() {
   const { connected, consumePaneTarget, paneTarget } = useWorkspace();
-  const [newTodo, setNewTodo] = useState("");
-  const [editing, setEditing] = useState<Todo | null>(null);
+  // null = closed · "new" = add modal · Todo = edit that todo.
+  const [modal, setModal] = useState<Todo | "new" | null>(null);
   const { result, query } = useCachedList<Todo>("todo", connected);
   const todos = useMemo(() => result?.data ?? [], [result?.data]);
-  const { mutate: createTodo } = useCreate();
   const { mutate: updateTodo } = useUpdate();
   const { mutate: deleteTodo } = useDelete();
 
   useEffect(() => {
     if (paneTarget?.view !== "todo" || paneTarget.id === undefined) return;
     const match = todos.find((t) => String(t.id) === String(paneTarget.id));
-    if (match) setEditing(match);
+    if (match) setModal(match);
     if (!query.isLoading) consumePaneTarget();
   }, [consumePaneTarget, paneTarget, query.isLoading, todos]);
 
@@ -34,12 +33,6 @@ export function TodoPane() {
   );
   useRegisterPane("todo", aiText);
 
-  function addTodo() {
-    const title = newTodo.trim();
-    if (!title) return;
-    setNewTodo("");
-    createTodo({ resource: "todo", values: { title } }, { onSuccess: () => void query.refetch() });
-  }
   function toggleTodo(t: Todo) {
     updateTodo({ resource: "todo", id: t.id, values: { done: !t.done } }, { onSuccess: () => void query.refetch() });
   }
@@ -76,7 +69,7 @@ export function TodoPane() {
       tdStyle: { textAlign: "right" },
       cell: (t) => (
         <>
-          <RowBtn onClick={() => setEditing(t)} title="수정">
+          <RowBtn onClick={() => setModal(t)} title="수정">
             수정
           </RowBtn>
           <RowBtn onClick={() => removeTodo(t)} danger title="삭제">
@@ -89,65 +82,62 @@ export function TodoPane() {
 
   return (
     <>
-      <h2 style={{ marginTop: 2 }}>할일</h2>
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, maxWidth: 540 }}>
-        <input
-          className="field"
-          style={{ flex: 1 }}
-          placeholder="새 할일…"
-          value={newTodo}
-          onChange={(e) => setNewTodo(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") addTodo();
-          }}
-        />
-        <button className="btn btn-accent" onClick={addTodo} style={{ padding: "8px 14px" }}>
-          추가
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2, marginBottom: 12 }}>
+        <h2 style={{ margin: 0 }}>할일</h2>
+        <button className="btn btn-accent" onClick={() => setModal("new")} style={{ padding: "6px 12px" }}>
+          + 새 할일
         </button>
       </div>
       <GridNotice query={query} count={todos.length} empty="할일이 없습니다.">
-        <Grid
-          columns={columns}
-          rows={todos}
-          getKey={(t) => String(t.id)}
-          maxWidth={680}
-          onRowClick={(t) => setEditing(t)}
-        />
+        <Grid columns={columns} rows={todos} getKey={(t) => String(t.id)} onRowClick={(t) => setModal(t)} />
       </GridNotice>
-      {editing && <TodoModal todo={editing} onClose={() => setEditing(null)} onSaved={() => void query.refetch()} />}
+      {modal && (
+        <TodoModal
+          todo={modal === "new" ? null : modal}
+          onClose={() => setModal(null)}
+          onSaved={() => void query.refetch()}
+        />
+      )}
     </>
   );
 }
 
-// Edit an existing todo: title + due date + note (the quick-add input only sets a
-// title). Maps to miniapp.todo.update via the data provider (non-`done` fields).
-function TodoModal({ todo, onClose, onSaved }: { todo: Todo; onClose: () => void; onSaved: () => void }) {
-  const [title, setTitle] = useState(todo.title);
-  const [due, setDue] = useState(todo.due ? todo.due.slice(0, 10) : "");
-  const [note, setNote] = useState(todo.note ?? "");
+// Create or edit a todo: title + due date + note. New todos go to miniapp.todo.create,
+// existing ones to miniapp.todo.update (non-`done` fields) via the data provider.
+function TodoModal({ todo, onClose, onSaved }: { todo: Todo | null; onClose: () => void; onSaved: () => void }) {
+  const [title, setTitle] = useState(todo?.title ?? "");
+  const [due, setDue] = useState(todo?.due ? todo.due.slice(0, 10) : "");
+  const [note, setNote] = useState(todo?.note ?? "");
   const [status, setStatus] = useState("");
+  const { mutate: createTodo } = useCreate();
   const { mutate: updateTodo } = useUpdate();
 
   function save() {
     const t = title.trim();
     if (!t) return setStatus("제목을 입력하세요");
     setStatus("저장 중…");
-    updateTodo(
-      // due as a date-only string (cleared with ""); best-effort vs the live gateway.
-      { resource: "todo", id: todo.id, values: { title: t, due, note: note.trim() } },
-      {
-        onSuccess: () => {
-          onSaved();
-          onClose();
-        },
-        onError: (e: unknown) => setStatus(`오류: ${errText(e)}`),
+    const handlers = {
+      onSuccess: () => {
+        onSaved();
+        onClose();
       },
-    );
+      onError: (e: unknown) => setStatus(`오류: ${errText(e)}`),
+    };
+    if (todo) {
+      // due as a date-only string (cleared with ""); best-effort vs the live gateway.
+      updateTodo({ resource: "todo", id: todo.id, values: { title: t, due, note: note.trim() } }, handlers);
+    } else {
+      // A fresh todo only carries what was filled in (mirrors the old quick-add).
+      const values: Record<string, string> = { title: t };
+      if (due) values.due = due;
+      if (note.trim()) values.note = note.trim();
+      createTodo({ resource: "todo", values }, handlers);
+    }
   }
 
   return (
     <Modal
-      title="할일 수정"
+      title={todo ? "할일 수정" : "할일 추가"}
       onClose={onClose}
       footer={
         <>

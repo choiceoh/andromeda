@@ -13,6 +13,10 @@ function capturing(fixtures: Record<string, unknown[]>, sink: Record<string, unk
   const base = fakeProvider(fixtures);
   return {
     ...base,
+    create: async (a) => {
+      sink.push({ ...a });
+      return base.create(a);
+    },
     update: async (a) => {
       sink.push({ ...a });
       return base.update(a);
@@ -41,5 +45,22 @@ describe("TodoPane", () => {
     expect(calls[0].resource).toBe("todo");
     expect(calls[0].id).toBe("t1");
     expect(calls[0].variables).toMatchObject({ title: "보고서", due: "2026-07-15", note: "초안 먼저" });
+  });
+
+  it("adds a todo through the + 새 할일 modal", async () => {
+    const calls: Record<string, unknown>[] = [];
+    const dataProvider = capturing({ todo: [] }, calls);
+    renderWithProviders(<TodoPane />, { connected: true, dataProvider });
+
+    // No inline add row — the modal only appears after pressing the + button.
+    expect(screen.queryByLabelText("제목")).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: /새 할일/ }));
+    await userEvent.type(screen.getByLabelText("제목"), "새 보고서");
+    fireEvent.change(screen.getByLabelText("마감"), { target: { value: "2026-08-01" } });
+    await userEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].resource).toBe("todo");
+    expect(calls[0].variables).toMatchObject({ title: "새 보고서", due: "2026-08-01" });
   });
 });

@@ -55,12 +55,12 @@ describe("Workstation (connected, fixtures)", () => {
     expect(await screen.findByText("세금 신고")).toBeInTheDocument();
     expect(screen.getByText(/분기 보고서/)).toBeInTheDocument();
 
-    // The dashboard has no add-todo form; the 할일 pane does — proves the switch.
+    // The dashboard has no add-todo control; the 할일 pane's "+ 새 할일" button does — proves the switch.
     // Scope the nav click to the sidebar (the dashboard also has a 할일 card button).
-    expect(screen.queryByPlaceholderText("새 할일…")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /새 할일/ })).not.toBeInTheDocument();
     const nav = screen.getByRole("navigation");
     await userEvent.click(within(nav).getByRole("button", { name: /할일/ }));
-    expect(await screen.findByPlaceholderText("새 할일…")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /새 할일/ })).toBeInTheDocument();
   });
 
   it("opens a dashboard mail row directly in the mail pane", async () => {
