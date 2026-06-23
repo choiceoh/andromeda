@@ -3,7 +3,6 @@ import { saveConfig } from "@/gateway";
 import { setString } from "@/storage";
 import { useGatewayStatus } from "@/hooks";
 import { type LogLevel, getLogLevel, setLogLevel } from "@/log";
-import { isTauri } from "@/tauri";
 import { checkForUpdates } from "@/updater";
 import { errText } from "@/format";
 import { muted } from "@/theme";
@@ -60,8 +59,21 @@ export function SettingsPane() {
   async function runUpdateCheck() {
     setUpdateMsg("확인 중…");
     try {
-      await checkForUpdates();
-      setUpdateMsg(isTauri() ? "최신 버전이거나 업데이트를 시작했습니다." : "업데이트는 데스크톱 앱에서만 지원됩니다.");
+      const result = await checkForUpdates();
+      switch (result.status) {
+        case "unavailable":
+          setUpdateMsg("업데이트는 데스크톱 앱에서만 지원됩니다.");
+          break;
+        case "up-to-date":
+          setUpdateMsg(`최신 버전입니다 (v${result.currentVersion}).`);
+          break;
+        case "installed":
+          setUpdateMsg(`v${result.version}으로 업데이트되어 재시작 중입니다.`);
+          break;
+        case "deferred":
+          setUpdateMsg(`v${result.version} 설치 완료 — 다음 실행 시 적용됩니다.`);
+          break;
+      }
     } catch (e) {
       setUpdateMsg(`업데이트 확인 실패: ${errText(e)}`);
     }

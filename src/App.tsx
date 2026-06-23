@@ -6,6 +6,8 @@ import { denebAuthProvider } from "./authProvider";
 import { refineResources } from "./resources";
 import { readDesktopToken } from "./tauri";
 import { checkForUpdates } from "./updater";
+import { errText } from "./format";
+import { log } from "./log";
 import { WorkspaceProvider } from "./workspaceContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Workstation } from "./components/Workstation";
@@ -20,9 +22,10 @@ export function App() {
   const connected = Boolean(cfg.url && cfg.token);
 
   // Desktop auto-update: check GitHub Releases for a newer signed build on launch.
-  // No-op on the web build; failures are swallowed so they never block startup.
+  // No-op on the web build. The interactive settings UI surfaces failures to the
+  // user; here we just log them so a transient update hiccup never blocks startup.
   useEffect(() => {
-    void checkForUpdates();
+    checkForUpdates().catch((e) => log.child("updater").warn("startup update check failed", errText(e)));
   }, []);
 
   // Desktop auto-connect: if we have no token yet, pull it from the OS keychain /
