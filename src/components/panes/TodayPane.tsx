@@ -1,6 +1,6 @@
 import { useList } from "@refinedev/core";
 import type { CalEvent, Mail, Todo, View, WorkItem } from "@/types";
-import { calSpan, text } from "@/format";
+import { calSpan, fmtDate, text } from "@/format";
 import { Icon } from "@/components/Icon";
 import { GridNotice } from "@/components/Grid";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
@@ -37,15 +37,17 @@ export function TodayPane() {
   const work = useList<WorkItem>({ resource: "workfeed", queryOptions: { enabled: connected } });
 
   const events = cal.result?.data ?? [];
-  // Recent mail, unread first — robust if `unread` is absent (order is just preserved).
-  const mails = [...(mail.result?.data ?? [])].sort((a, b) => Number(Boolean(b.unread)) - Number(Boolean(a.unread)));
+  // Recent mail, unread first — robust if `isUnread` is absent (order is just preserved).
+  const mails = [...(mail.result?.data ?? [])].sort(
+    (a, b) => Number(Boolean(b.isUnread)) - Number(Boolean(a.isUnread)),
+  );
   // Open todos, soonest due first; missing/unparseable due dates sink to the bottom.
   const due = (s?: string) => {
     if (!s) return Infinity;
     const t = new Date(s).getTime();
     return Number.isNaN(t) ? Infinity : t;
   };
-  const todos = (todo.result?.data ?? []).filter((t) => !t.done).sort((a, b) => due(a.dueDate) - due(b.dueDate));
+  const todos = (todo.result?.data ?? []).filter((t) => !t.done).sort((a, b) => due(a.due) - due(b.due));
   const items = work.result?.data ?? [];
 
   const briefs: Brief[] = [
@@ -57,7 +59,7 @@ export function TodayPane() {
       total: events.length,
       lines: events.slice(0, MAX).map((ev) => {
         const span = calSpan(ev.start, ev.end);
-        return `${ev.title ?? ev.summary ?? "(제목 없음)"}${span ? ` · ${span}` : ""}`;
+        return `${ev.summary ?? ev.title ?? "(제목 없음)"}${span ? ` · ${span}` : ""}`;
       }),
     },
     {
@@ -67,8 +69,8 @@ export function TodayPane() {
       query: mail.query,
       total: mails.length,
       lines: mails.slice(0, MAX).map((m) => {
-        const who = text(m.from) || text(m.sender);
-        return `${m.unread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}`;
+        const who = text(m.from);
+        return `${m.isUnread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}`;
       }),
     },
     {
@@ -77,7 +79,7 @@ export function TodayPane() {
       empty: "할일 없음",
       query: todo.query,
       total: todos.length,
-      lines: todos.slice(0, MAX).map((t) => `${t.title}${t.dueDate ? ` · 마감 ${t.dueDate}` : ""}`),
+      lines: todos.slice(0, MAX).map((t) => `${t.title}${t.due ? ` · 마감 ${fmtDate(t.due)}` : ""}`),
     },
     {
       label: "작업피드",
@@ -85,7 +87,7 @@ export function TodayPane() {
       empty: "작업피드 비어 있음",
       query: work.query,
       total: items.length,
-      lines: items.slice(0, MAX).map((w) => `${w.title ?? w.summary ?? "(항목)"}${w.kind ? ` · ${w.kind}` : ""}`),
+      lines: items.slice(0, MAX).map((w) => `${w.title ?? "(항목)"}${w.source ? ` · ${w.source}` : ""}`),
     },
   ];
 

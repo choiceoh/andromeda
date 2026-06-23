@@ -28,14 +28,26 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
 
   "miniapp.gmail.list_recent": () => ({ messages: fx.mail, nextPageToken: "" }),
   "miniapp.gmail.get": (p) => fx.mail.find((m) => String(m.id) === String(p.id)) ?? null,
-  "miniapp.gmail.trash": (p) => ({ id: p.id }),
+  "miniapp.gmail.mark_read": () => ({ ok: true }),
+  "miniapp.gmail.archive": () => ({ ok: true }),
+  "miniapp.gmail.trash": (p) => ({ id: p.id, ok: true }),
 
   "miniapp.calendar.list_upcoming": () => ({ events: fx.events }),
   "miniapp.calendar.get": (p) => fx.events.find((e) => String(e.id) === String(p.id)) ?? null,
+  "miniapp.calendar.create": (p) => ({ id: `e${Date.now()}`, local: true, ...p }),
+  "miniapp.calendar.update": (p) => ({ ...p }),
+  "miniapp.calendar.delete": () => ({ ok: true }),
 
   "miniapp.people.list": () => ({ people: fx.people, windowDays: 30, scannedCount: fx.people.length }),
+
   "miniapp.crons.list": () => ({ jobs: fx.crons, total: fx.crons.length }),
+  "miniapp.crons.update": (p) => ({ ...p }),
+  "miniapp.crons.run": () => ({ enqueued: true }),
+  "miniapp.crons.remove": () => ({ removed: true }),
+
   "miniapp.workfeed.list": () => ({ count: fx.workfeed.length, items: fx.workfeed, total: fx.workfeed.length }),
+  "miniapp.workfeed.ack": (p) => ({ ok: true, item: fx.workfeed.find((w) => String(w.id) === String(p.id)) ?? null }),
+  "miniapp.workfeed.action.run": () => ({ ok: true, removeFromFeed: true }),
 
   // memory.search wraps hits as { results }; get_page/write_page carry the body
   // under `body` — mirror the real gateway (handlerminiapp/memory*.go) so the mock
@@ -48,7 +60,7 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   }),
   "miniapp.memory.write_page": (p) => ({ path: p.path, body: p.body }),
 
-  "miniapp.search.all": (p) => fx.searchHits(typeof p.query === "string" ? p.query : ""),
+  "miniapp.search.all": (p) => fx.searchAll(typeof p.query === "string" ? p.query : ""),
 };
 
 function sse(frames: string[]) {

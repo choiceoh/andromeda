@@ -73,6 +73,26 @@ export const MEMORY_RPC = {
 
 export const SEARCH_RPC = "miniapp.search.all";
 
+// Action RPCs that don't fit generic CRUD (no id+fields update / delete shape).
+// Panes call these directly via useAction → callRpc, mirroring the native client.
+export const MAIL_RPC = {
+  markRead: "miniapp.gmail.mark_read",
+  archive: "miniapp.gmail.archive",
+  trash: "miniapp.gmail.trash",
+} as const;
+
+export const CRON_RPC = {
+  run: "miniapp.crons.run",
+  update: "miniapp.crons.update",
+  remove: "miniapp.crons.remove",
+} as const;
+
+export const WORKFEED_RPC = {
+  ack: "miniapp.workfeed.ack",
+  actionRun: "miniapp.workfeed.action.run",
+  answer: "miniapp.workfeed.answer",
+} as const;
+
 export const RESOURCE_MAP: Record<string, ResourceDef> = Object.fromEntries(RESOURCE_DEFS.map((r) => [r.name, r]));
 
 export function resourceDef(name: string): ResourceDef {

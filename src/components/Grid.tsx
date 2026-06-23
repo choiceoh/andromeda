@@ -74,3 +74,30 @@ export function GridNotice({
   if (count === 0) return <p style={notice}>{empty}</p>;
   return <>{children}</>;
 }
+
+// Compact inline action button for grid rows (읽음 / 보관 / 삭제 / 실행 …).
+export function RowBtn({
+  children,
+  onClick,
+  disabled,
+  danger,
+  title,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      className="row-btn"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      style={danger ? { color: "var(--due)" } : undefined}
+    >
+      {children}
+    </button>
+  );
+}
