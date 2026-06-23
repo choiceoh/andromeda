@@ -9,6 +9,7 @@ import { fmtDate } from "@/format";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 import { DeleteModal, OneFieldModal } from "./commonModals";
+import { entryPath, formatBytes, isFolder, joinPath, parentPath } from "./fileHelpers";
 
 export function FilesPane() {
   const { connected, cfg } = useWorkspace();
@@ -322,35 +323,6 @@ interface FilesSearchResponse {
 
 function filesListCacheKey(path: string): string {
   return rpcCacheKey(FILES_RPC.list, { path, limit: 300 });
-}
-
-function entryPath(entry: FileEntry): string {
-  return entry.pathDisplay ?? entry.pathLower ?? entry.name ?? "";
-}
-
-function isFolder(entry: FileEntry): boolean {
-  return entry.tag === "folder" || entry.tag === "dir";
-}
-
-function joinPath(base: string, name: string): string {
-  const cleanName = name.replace(/^\/+/, "");
-  const cleanBase = base.replace(/\/+$/, "");
-  return cleanBase ? `${cleanBase}/${cleanName}` : cleanName;
-}
-
-function parentPath(value: string): string {
-  const clean = value.replace(/^\/+|\/+$/g, "");
-  if (!clean) return "";
-  const parts = clean.split("/");
-  parts.pop();
-  return parts.join("/");
-}
-
-function formatBytes(size?: number): string {
-  if (typeof size !== "number" || !Number.isFinite(size) || size <= 0) return "";
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function fileToBase64(file: File): Promise<string> {
