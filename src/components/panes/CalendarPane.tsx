@@ -253,7 +253,11 @@ function EventModal({ event, onClose, onSaved }: { event?: CalEvent; onClose: ()
       onClose={onClose}
       footer={
         <>
-          {status && <span style={{ fontSize: 12, color: "var(--muted)", marginRight: "auto" }}>{status}</span>}
+          {status && (
+            <span className="pane-status" style={{ marginRight: "auto" }}>
+              {status}
+            </span>
+          )}
           <button className="btn" onClick={onClose}>
             취소
           </button>

@@ -3,9 +3,13 @@
 // and Esc close it; the panel follows the warm-Zen floating aesthetic (.panel).
 // Rendered inline: position:fixed escapes the work-area scroll container, so no
 // portal/root is needed and it stays trivially testable.
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { color, line } from "@/theme";
 import { Icon } from "./Icon";
+
+// Tabbable elements inside the dialog — used to keep keyboard focus trapped within.
+const FOCUSABLE =
+  'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function Modal({
   title,
@@ -20,10 +24,38 @@ export function Modal({
   footer?: ReactNode;
   width?: number;
 }) {
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Move focus into the dialog on open (unless an autoFocus field already took it)
+  // and return it to the trigger on close — the baseline a11y contract for a modal.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const prev = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
+    return () => prev?.focus?.();
+  }, []);
+
+  // Esc closes; Tab is trapped so keyboard focus can't wander to the page behind.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") return onClose();
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const f = panel.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (f.length === 0) return;
+      const first = f[0];
+      const last = f[f.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === panel)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -32,14 +64,20 @@ export function Modal({
     // mousedown (not click) so a text drag-selection ending on the backdrop doesn't close it.
     <div className="modal-backdrop" onMouseDown={onClose} role="presentation">
       <div
+        ref={panelRef}
         className="panel modal-panel"
         style={{ width, maxWidth: "calc(100vw - 48px)" }}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <header style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 16px", borderBottom: line }}>
-          <h3 style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <h3
+            id={titleId}
+            style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+          >
             {title}
           </h3>
           <button className="row-btn" onClick={onClose} aria-label="닫기" title="닫기">

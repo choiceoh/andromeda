@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type GatewayConfig,
   type ModelsList,
@@ -56,6 +56,15 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [sessionErr, setSessionErr] = useState("");
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  // Follow the newest message while it streams, but don't yank the view back down
+  // if the user has scrolled up to read earlier turns.
+  const pinnedRef = useRef(true);
+  useEffect(() => {
+    const el = transcriptRef.current;
+    if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
+  }, [turns, thinking]);
+
   const currentPane = paneLabel(view);
 
   // Load the model registry + recent sessions once connected; both are
@@ -93,6 +102,7 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
     const msg = message.trim();
     if (!msg || busy || !connected) return;
     setInput("");
+    pinnedRef.current = true; // a fresh send always rides down to the latest
     void send(msg, { workspaceContext: aiText, activeResource, model: model || undefined, sessionKey });
   }
 
@@ -205,7 +215,17 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
         ))}
       </div>
 
-      <div className="ai-transcript" role="log" aria-live="polite" aria-label="Deneb 대화">
+      <div
+        className="ai-transcript"
+        role="log"
+        aria-live="polite"
+        aria-label="Deneb 대화"
+        ref={transcriptRef}
+        onScroll={() => {
+          const el = transcriptRef.current;
+          if (el) pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        }}
+      >
         {turns.length === 0 ? (
           <div className="ai-empty">
             {connected ? "메시지를 보내면 대화가 여기에 쌓입니다." : "게이트웨이 연결 대기 중"}

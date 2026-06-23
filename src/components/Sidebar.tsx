@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type GatewayConfig, saveConfig } from "@/gateway";
 import { useGatewayStatus } from "@/hooks";
 import { useWorkspace } from "@/workspaceContext";
@@ -14,12 +14,31 @@ export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: Gatew
   const { connected, view, setView } = useWorkspace();
   const { status, check } = useGatewayStatus(cfg);
   const [open, setOpen] = useState(false);
+  const popRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (connected) void check();
     // check on mount only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Close the gateway popover on Escape or a press outside it. The toggle button
+  // lives inside popRef, so it still opens/closes through its own handler.
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (popRef.current && !popRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   const host = cfg.url ? cfg.url.replace(/^https?:\/\//, "").replace(/\/+$/, "") : "연결";
   const isError = status.startsWith("오류");
@@ -53,7 +72,7 @@ export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: Gatew
         </button>
       ))}
 
-      <div style={{ marginTop: "auto", paddingTop: 8 }}>
+      <div ref={popRef} style={{ marginTop: "auto", paddingTop: 8 }}>
         <button
           className="nav-item"
           onClick={() => setOpen((o) => !o)}
