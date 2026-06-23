@@ -1,12 +1,22 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MailPane } from "./MailPane";
 import { cachedListStorageKey, cachedOneStorageKey } from "@/cachedList";
 import { fakeProvider, renderWithProviders } from "@/test/util";
 
+beforeEach(() => {
+  // The detail's enrichment cards (분석·발신자) call gateway RPCs on open; keep
+  // these fixture-driven tests offline so the cards degrade instead of hitting
+  // the network. The data provider is injected, so this only stubs callRpc.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => Promise.reject(new Error("offline test"))),
+  );
+});
 afterEach(() => {
   localStorage.clear();
+  vi.unstubAllGlobals();
 });
 
 describe("MailPane", () => {

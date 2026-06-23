@@ -31,6 +31,35 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.gmail.mark_read": () => ({ ok: true }),
   "miniapp.gmail.archive": () => ({ ok: true }),
   "miniapp.gmail.trash": (p) => ({ id: p.id, ok: true }),
+  // Mail enrichment: a cached analysis for m1 (miss otherwise), sender context, Q&A.
+  "miniapp.gmail.analysis_cached": (p) =>
+    String(p.id) === "m1"
+      ? {
+          id: "m1",
+          analysis: "**핵심**: 다음 주 화요일 분기 리뷰 일정 확정 요청.\n\n- 회의 전 초안 자료 공유 필요",
+          relatedProjects: [
+            { path: "projects/andromeda", title: "Andromeda 설계 노트", summary: "3분할 워크스테이션" },
+          ],
+          cached: true,
+          analysisQuality: "중요",
+          calendarProposalCount: 1,
+          todoCount: 1,
+        }
+      : { id: p.id, analysis: "", cached: false },
+  "miniapp.gmail.analyze": (p) => ({
+    id: p.id,
+    analysis: "**핵심**: 새로 분석한 결과입니다.",
+    cached: false,
+    analysisQuality: "보통",
+  }),
+  "miniapp.gmail.sender_context": (p) => ({
+    sender: p.sender,
+    email: "lead@corp.example",
+    displayName: "김리드",
+    recent: { count: 12, lastReceivedAt: "2026-06-17T09:12:00Z", windowDays: 30 },
+    wikiHits: [{ path: "인물/김리드", title: "김리드", summary: "기획팀 팀장" }],
+  }),
+  "miniapp.gmail.ask": (p) => ({ answer: `"${p.question}" — 회의 전 초안 자료 공유가 핵심 요청입니다.` }),
 
   "miniapp.calendar.list_upcoming": () => ({ events: fx.events }),
   "miniapp.calendar.list_range": (p) => ({ events: fx.eventsInRange(String(p.from ?? ""), String(p.to ?? "")) }),
