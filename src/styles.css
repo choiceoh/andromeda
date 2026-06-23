@@ -75,6 +75,7 @@ body {
   font-size: 14px;
   color: var(--ink);
   background: var(--grad) fixed;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-feature-settings:
@@ -107,27 +108,40 @@ textarea {
   font-family: inherit;
 }
 
-/* scrollbars — thin, quiet */
+/* scrollbars — invisible at rest, a quiet warm-taupe thumb that fades in only
+ * while you're over the scrolling area, so they never clash with the warm-Zen
+ * surfaces. (The window itself never scrolls — body has overflow:hidden — only
+ * the panes do.) Warm neutral, not the clay accent: the accent stays singular. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cfd2d8 transparent;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgba(149, 137, 125, 0.5) transparent;
 }
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-*::-webkit-scrollbar-thumb {
-  background: #d4d7dd;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: #bdc0c8;
-  background-clip: content-box;
+  width: 9px;
+  height: 9px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(149, 137, 125, 0.5);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(118, 106, 95, 0.75);
+  background-clip: content-box;
 }
 
 ::selection {
