@@ -20,15 +20,17 @@ export function Grid<T>({
   maxWidth,
   rowStyle,
   onRowClick,
+  isRowSelected,
+  rowTitle,
 }: {
   columns: Column<T>[];
   rows: T[];
   getKey: (row: T) => string;
   maxWidth?: number;
   rowStyle?: (row: T) => CSSProperties;
-  // When set, rows become clickable (open a detail/edit modal). Action buttons in a
-  // cell should wrap themselves in a stopPropagation span so they don't also fire this.
   onRowClick?: (row: T) => void;
+  isRowSelected?: (row: T) => boolean;
+  rowTitle?: (row: T) => string;
 }) {
   return (
     <table className="dgrid" style={{ maxWidth }}>
@@ -42,28 +44,40 @@ export function Grid<T>({
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
-          <tr
-            key={getKey(row)}
-            onClick={onRowClick ? () => onRowClick(row) : undefined}
-            style={{ ...(onRowClick ? { cursor: "pointer" } : null), ...rowStyle?.(row) }}
-          >
-            {columns.map((c, i) => (
-              <td key={i} style={c.tdStyle}>
-                {c.cell(row)}
-              </td>
-            ))}
-          </tr>
-        ))}
+        {rows.map((row) => {
+          const interactive = Boolean(onRowClick);
+          const selected = Boolean(isRowSelected?.(row));
+          const className = [interactive ? "clickable" : "", selected ? "selected" : ""].filter(Boolean).join(" ");
+          return (
+            <tr
+              key={getKey(row)}
+              className={className || undefined}
+              style={rowStyle?.(row)}
+              tabIndex={interactive ? 0 : undefined}
+              aria-selected={interactive ? selected : undefined}
+              title={rowTitle?.(row)}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onKeyDown={
+                onRowClick
+                  ? (e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      onRowClick(row);
+                    }
+                  : undefined
+              }
+            >
+              {columns.map((c, i) => (
+                <td key={i} style={c.tdStyle}>
+                  {c.cell(row)}
+                </td>
+              ))}
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
-}
-
-// Wrap row-action buttons so a click on them doesn't also trigger the row's
-// onRowClick (open-detail). Use inside a clickable grid's action cell.
-export function StopClick({ children }: { children: ReactNode }) {
-  return <span onClick={(e) => e.stopPropagation()}>{children}</span>;
 }
 
 // Renders a notice (and nothing else) when the grid can't show rows yet; checks
@@ -106,7 +120,10 @@ export function RowBtn({
   return (
     <button
       className="row-btn"
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       disabled={disabled}
       title={title}
       style={danger ? { color: "var(--due)" } : undefined}

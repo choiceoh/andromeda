@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { useCreate, useList, useUpdate } from "@refinedev/core";
+import { useMemo, useState } from "react";
+import { useCreate, useUpdate } from "@refinedev/core";
+
 import type { CalEvent } from "@/types";
 import { serializeList } from "@/aiText";
-import { calSpan, calStamp, errText } from "@/format";
+import { useCachedList } from "@/cachedList";
+import { calSpan, calStamp, dayKey, errText, eventDayKeys, eventTitle } from "@/format";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
-import { Column, Grid, GridNotice, RowBtn, StopClick } from "@/components/Grid";
+import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
+import { MonthGrid } from "@/components/MonthGrid";
 import { Detail, Field, Modal } from "@/components/Modal";
-
-// Gateway sends the event name under `summary`; keep `title` as a legacy fallback.
-const titleOf = (ev: CalEvent) => ev.summary ?? ev.title ?? "(제목 없음)";
 
 // RFC3339 → <input type="datetime-local"> value (local wall-clock, minute precision).
 function toLocalInput(iso?: string): string {
@@ -22,15 +22,33 @@ function toLocalInput(iso?: string): string {
 
 export function CalendarPane() {
   const { connected } = useWorkspace();
-  const { result, query } = useList<CalEvent>({ resource: "calendar", queryOptions: { enabled: connected } });
-  const events = result?.data ?? [];
+  const { result, query } = useCachedList<CalEvent>("calendar", connected);
+  // Stable reference so the day-map memo below only recomputes when data changes.
+  const events = useMemo(() => result?.data ?? [], [result?.data]);
   const { run, error, busy } = useAction(() => void query.refetch());
   // null = closed · {} = create · { ev } = open existing (editable when ev.local).
   const [edit, setEdit] = useState<{ ev?: CalEvent } | null>(null);
 
+  const now = new Date();
+  const todayKey = dayKey(now);
+  const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
+
+  // Place each event on every day it spans, so the month grid can look a day up.
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalEvent[]>();
+    for (const ev of events) {
+      for (const k of eventDayKeys(ev.start, ev.end)) {
+        const arr = map.get(k);
+        if (arr) arr.push(ev);
+        else map.set(k, [ev]);
+      }
+    }
+    return map;
+  }, [events]);
+
   const aiText = serializeList("일정", events, (ev) => {
     const span = calSpan(ev.start, ev.end);
-    return `- ${titleOf(ev)}${span ? ` (${span})` : ""}${ev.location ? ` @${ev.location}` : ""}`;
+    return `- ${eventTitle(ev)}${span ? ` (${span})` : ""}${ev.location ? ` @${ev.location}` : ""}`;
   });
   useRegisterPane("calendar", aiText);
 
@@ -41,33 +59,58 @@ export function CalendarPane() {
       tdStyle: { fontSize: 13, opacity: 0.8, whiteSpace: "nowrap" },
       cell: (ev) => calSpan(ev.start, ev.end) || "—",
     },
-    { header: "일정", cell: (ev) => titleOf(ev) },
+    { header: "일정", cell: (ev) => eventTitle(ev) },
     { header: "장소", width: 150, tdStyle: { fontSize: 13, opacity: 0.7 }, cell: (ev) => ev.location ?? "" },
     {
       header: "",
       width: 60,
       tdStyle: { textAlign: "right" },
       // Only locally-created events are deletable; Google-sourced events are read-only.
+      // RowBtn stops click propagation itself, so it won't also open the row's modal.
       cell: (ev) =>
         ev.local ? (
-          <StopClick>
-            <RowBtn onClick={() => run("miniapp.calendar.delete", { id: ev.id })} disabled={busy} danger title="삭제">
-              삭제
-            </RowBtn>
-          </StopClick>
+          <RowBtn onClick={() => run("miniapp.calendar.delete", { id: ev.id })} disabled={busy} danger title="삭제">
+            삭제
+          </RowBtn>
         ) : null,
     },
   ];
 
+  // Step the visible month, normalizing year rollover via the Date constructor.
+  const step = (delta: number) =>
+    setCursor((c) => {
+      const d = new Date(c.y, c.m + delta, 1);
+      return { y: d.getFullYear(), m: d.getMonth() };
+    });
+
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <h2 style={{ margin: 0 }}>일정</h2>
         <button className="btn" onClick={() => setEdit({})} disabled={!connected} style={{ marginLeft: "auto" }}>
           새 일정
         </button>
       </div>
-      {error && <p style={{ color: "var(--due)", fontSize: 12, margin: "0 0 8px" }}>오류: {error}</p>}
+      {error && <p style={{ color: "var(--due)", fontSize: 12, margin: "8px 0 0" }}>오류: {error}</p>}
+
+      {connected && (
+        <div style={{ marginTop: 14 }}>
+          <MonthGrid
+            year={cursor.y}
+            month0={cursor.m}
+            eventsByDay={eventsByDay}
+            todayKey={todayKey}
+            onPrev={() => step(-1)}
+            onNext={() => step(1)}
+            onToday={() => {
+              const t = new Date();
+              setCursor({ y: t.getFullYear(), m: t.getMonth() });
+            }}
+          />
+        </div>
+      )}
+
+      <h3 style={{ margin: "22px 0 10px", color: "var(--muted)" }}>다가오는 일정</h3>
       <GridNotice query={query} count={events.length} empty="다가오는 일정이 없습니다.">
         <Grid
           columns={columns}
@@ -77,12 +120,13 @@ export function CalendarPane() {
           onRowClick={(ev) => setEdit({ ev })}
         />
       </GridNotice>
+
       {edit && <EventModal event={edit.ev} onClose={() => setEdit(null)} onSaved={() => void query.refetch()} />}
     </>
   );
 }
 
-// Create (no event), edit (event.local), or read-only detail (Google event) — one
+// Create (no event), edit (local event), or read-only detail (Google event) — one
 // modal. Write paths use the already-wired calendar.create / calendar.update RPCs.
 function EventModal({ event, onClose, onSaved }: { event?: CalEvent; onClose: () => void; onSaved: () => void }) {
   const isNew = !event;
@@ -131,7 +175,7 @@ function EventModal({ event, onClose, onSaved }: { event?: CalEvent; onClose: ()
   if (!editable) {
     return (
       <Modal
-        title={titleOf(event)}
+        title={eventTitle(event)}
         onClose={onClose}
         footer={
           <button className="btn" onClick={onClose}>

@@ -9,10 +9,11 @@
  * clay accent, restrained motion. */
 
 :root {
-  /* window background — soft warm glow over a cool neutral gradient */
+  /* window background — soft warm glow over a cool neutral gradient.
+   * Deepened a touch so the white panels read as clearly floating above it. */
   --grad:
-    radial-gradient(130% 90% at 12% 2%, #f8ebe2 0%, rgba(248, 235, 226, 0) 48%),
-    linear-gradient(157deg, #eef0f5 0%, #e9eaf0 52%, #efeae9 100%);
+    radial-gradient(130% 90% at 12% 2%, #f4e3d6 0%, rgba(244, 227, 214, 0) 50%),
+    linear-gradient(157deg, #e3e5ee 0%, #dcdee8 52%, #e6e0df 100%);
 
   /* surfaces */
   --panel: #ffffff;
@@ -37,15 +38,18 @@
   /* semantic */
   --online: #6b9b80;
   --due: #a85038;
+  --due-soft: rgba(168, 80, 56, 0.12);
 
   /* shape */
   --radius-panel: 14px;
   --radius-ctl: 9px;
   --radius-pill: 8px;
 
-  /* elevation */
-  --shadow-panel: 0 10px 34px -14px rgba(33, 38, 66, 0.22), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-pill: 0 2px 8px -2px rgba(40, 45, 70, 0.18);
+  /* elevation — layered "floating" shadows: a crisp contact layer, a mid lift,
+   * and a deep diffuse ambient layer that does most of the floating. */
+  --shadow-panel:
+    0 1px 2px rgba(33, 38, 66, 0.05), 0 10px 24px -10px rgba(33, 38, 66, 0.2), 0 30px 64px -22px rgba(33, 38, 66, 0.34);
+  --shadow-pill: 0 1px 2px rgba(40, 45, 70, 0.1), 0 8px 18px -5px rgba(40, 45, 70, 0.24);
 
   /* layout */
   --rail-w: 100px;
@@ -203,6 +207,99 @@ textarea {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+.ai-compose {
+  flex: 1;
+  min-height: 68px;
+  max-height: 150px;
+  line-height: 1.45;
+  resize: vertical;
+}
+.ai-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.quick-action {
+  border: 1px solid var(--line-2);
+  background: var(--panel-sunken);
+  color: var(--ink-2);
+  border-radius: var(--radius-pill);
+  padding: 5px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.quick-action:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: rgba(193, 122, 91, 0.28);
+  color: var(--accent-deep);
+}
+.quick-action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.ai-transcript {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 1px;
+}
+.ai-empty {
+  color: var(--muted-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ai-turn {
+  display: grid;
+  gap: 4px;
+  max-width: 94%;
+}
+.ai-turn.user {
+  align-self: flex-end;
+}
+.ai-turn.assistant {
+  align-self: flex-start;
+}
+.ai-turn-label {
+  font-size: 10px;
+  color: var(--muted-2);
+}
+.ai-turn.user .ai-turn-label {
+  text-align: right;
+}
+.ai-turn-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: var(--radius-ctl);
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.62;
+  color: var(--ink-2);
+  background: var(--panel-sunken);
+}
+.ai-turn.user .ai-turn-body {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.ai-turn.error .ai-turn-body {
+  color: var(--due);
+}
+.ai-turn.streaming .ai-turn-body {
+  color: var(--muted);
+}
+.ai-thinking {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.5;
+}
 .btn {
   border: 1px solid var(--line-2);
   background: var(--panel);
@@ -283,6 +380,13 @@ textarea {
 .dgrid tbody tr:hover {
   background: #faf9f8;
 }
+.dgrid tbody tr.clickable {
+  cursor: pointer;
+}
+.dgrid tbody tr.selected,
+.dgrid tbody tr.selected:hover {
+  background: var(--accent-soft);
+}
 
 /* compact row-action button (mail/cron/workfeed actions) */
 .row-btn {
@@ -341,6 +445,73 @@ textarea {
   background: var(--panel-sunken);
 }
 
+/* mail reader split view */
+.mail-split {
+  display: grid;
+  grid-template-columns: minmax(380px, 1fr) minmax(280px, 38%);
+  gap: 22px;
+  align-items: start;
+}
+.mail-list {
+  min-width: 0;
+  overflow: auto;
+}
+.mail-detail {
+  min-width: 0;
+  border-left: 1px solid var(--line);
+  padding-left: 20px;
+}
+.mail-detail-empty,
+.mail-detail-status {
+  color: var(--muted-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.mail-detail-status {
+  margin-bottom: 9px;
+}
+.mail-detail-status.error {
+  color: var(--due);
+}
+.mail-detail-head {
+  display: grid;
+  gap: 7px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--line);
+}
+.mail-detail-subject {
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.mail-detail-meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.mail-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.mail-label {
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  font-size: 11px;
+}
+.mail-body {
+  margin: 13px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 /* today section header */
 .sec-head {
   display: flex;
@@ -349,6 +520,104 @@ textarea {
   border-bottom: 1px solid var(--line);
   padding-bottom: 7px;
   margin-bottom: 8px;
+}
+
+/* month calendar (일정 pane) — flat grid lines drawn by per-cell borders */
+.cal-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--muted);
+  border-radius: var(--radius-ctl);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.cal-nav-btn:hover {
+  background: #f5f5f7;
+  color: var(--ink);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  overflow: hidden;
+  background: var(--panel);
+}
+.cal-dow {
+  padding: 7px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-2);
+  background: var(--panel-sunken);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.cal-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 96px;
+  padding: 5px 6px 7px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+.cal-cell.out {
+  background: var(--panel-sunken);
+}
+.cal-daynum {
+  align-self: flex-start;
+  min-width: 19px;
+  height: 19px;
+  line-height: 19px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--ink-2);
+}
+.cal-cell.out .cal-daynum {
+  color: var(--faint);
+}
+.cal-today .cal-daynum {
+  padding: 0 6px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+}
+.cal-chip {
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-chip.mine {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+.cal-chip.deadline {
+  background: var(--due-soft);
+  color: var(--due);
+}
+.cal-chip.others {
+  background: var(--panel-sunken);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.cal-more {
+  padding-left: 2px;
+  font-size: 11px;
+  color: var(--muted-2);
 }
 
 /* micro label (tracked uppercase, for latin labels like DENEB AI) */
@@ -413,6 +682,18 @@ textarea {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@media (max-width: 1040px) {
+  .mail-split {
+    grid-template-columns: 1fr;
+  }
+  .mail-detail {
+    border-left: none;
+    border-top: 1px solid var(--line);
+    padding-left: 0;
+    padding-top: 16px;
   }
 }
 

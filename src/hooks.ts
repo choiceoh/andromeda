@@ -9,7 +9,22 @@ export interface ChatState {
   out: string;
   thinking: string;
   busy: boolean;
+  turns: ChatTurn[];
+  clear: () => void;
   send: (message: string, workspaceContext: string, activeResource?: string) => Promise<void>;
+}
+
+export interface ChatTurn {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  status: "done" | "streaming" | "error";
+}
+
+function chatTurnId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`;
 }
 
 // Drives one Deneb chat/stream turn: streams delta/tool/thinking, and on done
@@ -18,14 +33,35 @@ export function useChat(cfg: GatewayConfig): ChatState {
   const [out, setOut] = useState("");
   const [thinking, setThinking] = useState("");
   const [busy, setBusy] = useState(false);
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
   const invalidate = useInvalidate();
+
+  function clear() {
+    if (busy) return;
+    setOut("");
+    setThinking("");
+    setTurns([]);
+  }
 
   async function send(message: string, workspaceContext: string, activeResource?: string) {
     const msg = message.trim();
     if (!msg || busy) return;
+    const assistantId = chatTurnId();
     setOut("");
     setThinking("");
+    setTurns((prev) => [
+      ...prev,
+      { id: chatTurnId(), role: "user", text: msg, status: "done" },
+      { id: assistantId, role: "assistant", text: "", status: "streaming" },
+    ]);
     setBusy(true);
+    let failed = false;
+    const patchAssistant = (update: (turn: ChatTurn) => ChatTurn) => {
+      setTurns((prev) => prev.map((turn) => (turn.id === assistantId ? update(turn) : turn)));
+    };
+    const appendAssistant = (text: string) => {
+      patchAssistant((turn) => ({ ...turn, text: turn.text + text }));
+    };
     try {
       await chatStream(
         cfg,
@@ -35,30 +71,46 @@ export function useChat(cfg: GatewayConfig): ChatState {
           onDelta: (t) => {
             setThinking("");
             setOut((p) => p + t);
+            appendAssistant(t);
           },
           // Show the AI using tools — the visible half of two-way collaboration.
           onTool: (ev) => {
             const e = ev as { state?: string; tool?: string };
-            if (e.state === "started" && e.tool) setOut((p) => `${p}\n[🔧 ${e.tool}]\n`);
+            if (e.state === "started" && e.tool) {
+              const line = `\n[도구: ${e.tool}]\n`;
+              setOut((p) => `${p}${line}`);
+              appendAssistant(line);
+            }
           },
           // The AI may have changed back-end data via a tool — refresh the active grid.
-          onDone: () => {
+          onDone: (final) => {
+            patchAssistant((turn) => ({ ...turn, text: turn.text || final.text, status: "done" }));
+            setOut((p) => p || final.text);
             if (activeResource) invalidate({ resource: activeResource, invalidates: ["list"] });
           },
-          onError: (e) => setOut((p) => `${p}\n[오류] ${e}`),
+          onError: (e) => {
+            failed = true;
+            const line = `\n[오류] ${e}`;
+            setOut((p) => `${p}${line}`);
+            patchAssistant((turn) => ({ ...turn, text: `${turn.text}${line}`, status: "error" }));
+          },
         },
         "client:main",
         workspaceContext,
       );
     } catch (e) {
-      setOut(`[오류] ${(e as Error).message}`);
+      failed = true;
+      const line = `[오류] ${(e as Error).message}`;
+      setOut(line);
+      patchAssistant((turn) => ({ ...turn, text: line, status: "error" }));
     } finally {
       setThinking("");
+      if (!failed) patchAssistant((turn) => ({ ...turn, status: "done" }));
       setBusy(false);
     }
   }
 
-  return { out, thinking, busy, send };
+  return { out, thinking, busy, turns, clear, send };
 }
 
 export interface GatewayStatus {

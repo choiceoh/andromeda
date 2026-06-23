@@ -7,7 +7,7 @@ import { color, ellipsis } from "@/theme";
 import { fmtDate } from "@/format";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
-import { Column, Grid, GridNotice, RowBtn, StopClick } from "@/components/Grid";
+import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 import { Detail, Modal } from "@/components/Modal";
 
 const hasError = (c: Cron) => Boolean(c.lastError) || (c.consecutiveErrors ?? 0) > 0;
@@ -66,23 +66,21 @@ export function CronsPane() {
       width: 170,
       tdStyle: { whiteSpace: "nowrap", textAlign: "right" },
       cell: (c) => (
-        <StopClick>
-          <span style={{ display: "inline-flex", gap: 2, justifyContent: "flex-end" }}>
-            <RowBtn onClick={() => run(CRON_RPC.run, { id: c.id })} disabled={busy} title="지금 실행">
-              실행
-            </RowBtn>
-            <RowBtn
-              onClick={() => run(CRON_RPC.update, { id: c.id, enabled: c.enabled === false })}
-              disabled={busy}
-              title={c.enabled === false ? "활성화" : "중지"}
-            >
-              {c.enabled === false ? "활성화" : "중지"}
-            </RowBtn>
-            <RowBtn onClick={() => run(CRON_RPC.remove, { id: c.id })} disabled={busy} danger title="삭제">
-              삭제
-            </RowBtn>
-          </span>
-        </StopClick>
+        <span style={{ display: "inline-flex", gap: 2, justifyContent: "flex-end" }}>
+          <RowBtn onClick={() => run(CRON_RPC.run, { id: c.id })} disabled={busy} title="지금 실행">
+            실행
+          </RowBtn>
+          <RowBtn
+            onClick={() => run(CRON_RPC.update, { id: c.id, enabled: c.enabled === false })}
+            disabled={busy}
+            title={c.enabled === false ? "활성화" : "중지"}
+          >
+            {c.enabled === false ? "활성화" : "중지"}
+          </RowBtn>
+          <RowBtn onClick={() => run(CRON_RPC.remove, { id: c.id })} disabled={busy} danger title="삭제">
+            삭제
+          </RowBtn>
+        </span>
       ),
     },
   ];

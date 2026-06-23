@@ -12,7 +12,8 @@ work area (grids/editors) + Deneb AI collaboration. Data and AI come from the
 Deneb gateway over `miniapp.*` RPC, `chat/stream` (SSE), and `events` (SSE).
 
 Stack: **Tauri 2** (Rust desktop shell) + **React 18** + **Refine** (headless
-admin framework) + **Vite**. Full design rationale: [`docs/DESIGN.md`](docs/DESIGN.md).
+admin framework) + **Vite**. Design rationale (why/what): [`docs/DESIGN.md`](docs/DESIGN.md).
+UI·UX design system (how it looks/behaves — tokens, components, patterns): [`docs/UI-UX.md`](docs/UI-UX.md).
 
 ## Commands
 

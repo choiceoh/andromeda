@@ -5,7 +5,7 @@ import { serializeList } from "@/aiText";
 import { errText, fmtDate } from "@/format";
 import { field } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
-import { Column, Grid, GridNotice, RowBtn, StopClick } from "@/components/Grid";
+import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 import { Field, Modal } from "@/components/Modal";
 
 export function TodoPane() {
@@ -61,14 +61,14 @@ export function TodoPane() {
       width: 96,
       tdStyle: { textAlign: "right" },
       cell: (t) => (
-        <StopClick>
+        <>
           <RowBtn onClick={() => setEditing(t)} title="수정">
             수정
           </RowBtn>
           <RowBtn onClick={() => removeTodo(t)} danger title="삭제">
             삭제
           </RowBtn>
-        </StopClick>
+        </>
       ),
     },
   ];
