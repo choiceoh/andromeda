@@ -16,6 +16,7 @@ export function ProactivePanel({ cfg }: { cfg: GatewayConfig }) {
       {events.map((e) => (
         <div
           key={e.id}
+          className="proactive-nudge"
           style={{
             display: "flex",
             gap: 8,

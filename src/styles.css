@@ -410,6 +410,7 @@ textarea {
   font-size: 12px;
   font-style: italic;
   line-height: 1.5;
+  animation: breathe 1.7s ease-in-out infinite;
 }
 .ai-turn-body.streaming {
   color: var(--muted);
@@ -460,6 +461,7 @@ textarea {
   margin-bottom: 11px;
   max-height: 232px;
   overflow: auto;
+  animation: fadeUp 0.22s var(--ease) both;
 }
 .session-drawer-head {
   display: flex;
@@ -1768,20 +1770,21 @@ textarea {
   animation: fadeUp 0.45s var(--ease) both;
 }
 
-/* work-area pane switch — the incoming pane settles in. Opacity only, so it never
- * fights a pane's own staggered .fade-up sections; height:100% so full-height
- * panes (위키·파일) still resolve their percentage layout. */
+/* work-area pane switch — the incoming pane settles in with a small rise.
+ * height:100% so full-height panes (위키·파일) still resolve their percentage layout. */
 @keyframes paneIn {
   from {
     opacity: 0;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
+    transform: none;
   }
 }
 .pane-enter {
   height: 100%;
-  animation: paneIn 0.24s var(--ease) both;
+  animation: paneIn 0.28s var(--ease) both;
 }
 
 /* a tool chip popping into a streaming reply */
@@ -1793,6 +1796,32 @@ textarea {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* a proactive nudge sliding in from the panel edge */
+@keyframes nudgeIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.proactive-nudge {
+  animation: nudgeIn 0.3s var(--ease) both;
+}
+
+/* the "생각 중…" indicator gently breathing while Deneb thinks */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
   }
 }
 
