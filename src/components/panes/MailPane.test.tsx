@@ -85,6 +85,26 @@ describe("MailPane", () => {
     expect(within(detail).getByText("상세 본문 대신 스니펫을 표시합니다.")).toBeInTheDocument();
   });
 
+  it("renders the message body as Markdown (links become anchors)", async () => {
+    const dataProvider = fakeProvider({
+      mail: [
+        {
+          id: "m1",
+          subject: "링크 메일",
+          from: "a@b.com",
+          body: "## 안내\n\n자세한 내용은 [문서](https://example.com) 참고.",
+        },
+      ],
+    });
+    renderWithProviders(<MailPane />, { connected: true, dataProvider });
+
+    await userEvent.click(await screen.findByText("링크 메일"));
+    const detail = screen.getByLabelText("메일 상세");
+    expect(within(detail).getByRole("heading", { name: "안내" })).toBeInTheDocument();
+    const link = within(detail).getByRole("link", { name: "문서" });
+    expect(link).toHaveAttribute("href", "https://example.com");
+  });
+
   it("keeps only the inline delete action on each row", async () => {
     const dataProvider = fakeProvider({
       mail: [{ id: "m1", subject: "정리 대상", from: "kim@corp.com", isUnread: true }],

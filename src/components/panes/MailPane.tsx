@@ -8,6 +8,7 @@ import { fmtDate, text } from "@/format";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
+import { Markdown } from "@/components/Markdown";
 
 export function MailPane() {
   const { connected } = useWorkspace();
@@ -162,7 +163,15 @@ function MailDetail({
           </div>
         )}
       </div>
-      <pre className="mail-body">{body || "본문 없음"}</pre>
+      {body ? (
+        // The gateway returns the body HTML-converted to Markdown, so render it
+        // as Markdown — links become clickable, lists/quotes keep structure.
+        <div className="mail-body">
+          <Markdown text={body} />
+        </div>
+      ) : (
+        <div className="mail-body mail-detail-empty">본문 없음</div>
+      )}
     </section>
   );
 }

@@ -1,65 +1,190 @@
-import { useState } from "react";
-import type { GatewayConfig } from "@/gateway";
-import { useChat } from "@/hooks";
+import { useEffect, useState } from "react";
+import {
+  type GatewayConfig,
+  type ModelsList,
+  type SessionRow,
+  deleteSession,
+  listModels,
+  recentSessions,
+  sessionTranscript,
+} from "@/gateway";
+import { type ChatTurn, useChat } from "@/hooks";
+import { errText } from "@/format";
 import { useWorkspace } from "@/workspaceContext";
 import { Icon } from "./Icon";
+import { Markdown } from "./Markdown";
+import { ModelPicker } from "./ModelPicker";
 import { ProactivePanel } from "./ProactivePanel";
+import { SessionDrawer } from "./SessionDrawer";
+import { ToolChip } from "./ToolChip";
 import { paneLabel } from "./panes";
 
-// Right floating panel: Deneb AI collaboration. Reads the active pane's pushed text
-// from the workspace context and streams a reply; tool calls that mutate data
-// refresh the active grid (handled in useChat).
+const MAIN_SESSION = "client:main";
+
+// One assistant reply: ordered text (Markdown) and tool chips, or — for a
+// transcript-loaded / pre-stream turn with no parts — the plain body as Markdown.
+function AssistantBody({ turn }: { turn: ChatTurn }) {
+  const parts = turn.parts;
+  if (!parts || parts.length === 0) {
+    if (turn.status === "streaming") return <div className="ai-turn-body streaming">응답 대기 중…</div>;
+    return (
+      <div className="ai-turn-body">
+        <Markdown text={turn.text || ""} />
+      </div>
+    );
+  }
+  return (
+    <div className="ai-turn-body">
+      {parts.map((p, i) =>
+        p.kind === "text" ? <Markdown key={i} text={p.text} /> : <ToolChip key={p.id || i} part={p} />,
+      )}
+    </div>
+  );
+}
+
+// Right floating panel: Deneb AI collaboration. Reads the active pane's pushed
+// text from the workspace context and streams a reply with Markdown + tool
+// chips; a model picker drives the per-turn model and a history drawer switches
+// conversations. Tool calls that mutate data refresh the active grid (useChat).
 export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
   const { view, aiText, activeResource, connected } = useWorkspace();
-  const { thinking, busy, turns, clear, send } = useChat(cfg);
+  const { thinking, busy, turns, send, stop, regenerate, clear, setTurns } = useChat(cfg);
   const [input, setInput] = useState("");
+  const [models, setModels] = useState<ModelsList | null>(null);
+  const [model, setModel] = useState(""); // selected override id ("" → gateway main)
+  const [sessionKey, setSessionKey] = useState(MAIN_SESSION);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [sessionErr, setSessionErr] = useState("");
   const currentPane = paneLabel(view);
+
+  // Load the model registry + recent sessions once connected; both are
+  // best-effort (an older gateway or the offline test path just leaves them empty).
+  useEffect(() => {
+    if (!connected) {
+      setModels(null);
+      setSessions([]);
+      return;
+    }
+    let cancelled = false;
+    void listModels(cfg)
+      .then((m) => {
+        if (cancelled) return;
+        setModels(m);
+        setModel((prev) => prev || m.current || "");
+      })
+      .catch(() => {});
+    void recentSessions(cfg, 20)
+      .then((s) => !cancelled && setSessions(s))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, cfg.url, cfg.token]);
+
   const quickActions = [
-    {
-      label: "우선순위",
-      prompt: `현재 ${currentPane} 화면을 보고, 지금 먼저 처리할 순서와 이유를 짧게 정리해줘.`,
-    },
-    {
-      label: "요약",
-      prompt: `현재 ${currentPane} 화면의 핵심만 한눈에 보이게 요약해줘.`,
-    },
-    {
-      label: "후속 조치",
-      prompt: `현재 ${currentPane} 화면에서 내가 바로 실행할 후속 조치를 뽑아줘.`,
-    },
+    { label: "우선순위", prompt: `현재 ${currentPane} 화면을 보고, 지금 먼저 처리할 순서와 이유를 짧게 정리해줘.` },
+    { label: "요약", prompt: `현재 ${currentPane} 화면의 핵심만 한눈에 보이게 요약해줘.` },
+    { label: "후속 조치", prompt: `현재 ${currentPane} 화면에서 내가 바로 실행할 후속 조치를 뽑아줘.` },
   ];
 
   function submit(message = input) {
     const msg = message.trim();
     if (!msg || busy || !connected) return;
     setInput("");
-    void send(msg, aiText, activeResource);
+    void send(msg, { workspaceContext: aiText, activeResource, model: model || undefined, sessionKey });
   }
+
+  async function refreshSessions() {
+    try {
+      setSessions(await recentSessions(cfg, 20));
+      setSessionErr("");
+    } catch (e) {
+      setSessionErr(errText(e));
+    }
+  }
+
+  function toggleSessions() {
+    const next = !sessionsOpen;
+    setSessionsOpen(next);
+    if (next) void refreshSessions();
+  }
+
+  function newChat() {
+    if (busy) return;
+    setSessionsOpen(false);
+    setSessionKey(MAIN_SESSION);
+    clear();
+  }
+
+  // Switch conversations: load the picked session's transcript and continue it.
+  async function selectSession(key: string) {
+    if (busy) return;
+    setSessionsOpen(false);
+    setSessionKey(key);
+    try {
+      const msgs = await sessionTranscript(cfg, key);
+      setTurns(
+        msgs.map((m, i) => ({
+          id: m.id || `tr-${key}-${i}`,
+          role: m.role === "user" ? "user" : "assistant",
+          text: m.content,
+          status: "done" as const,
+        })),
+      );
+      setSessionErr("");
+    } catch (e) {
+      setSessionErr(errText(e));
+    }
+  }
+
+  async function removeSession(key: string) {
+    try {
+      await deleteSession(cfg, key);
+      setSessions((prev) => prev.filter((s) => s.key !== key));
+      if (key === sessionKey) newChat();
+    } catch (e) {
+      setSessionErr(errText(e));
+    }
+  }
+
+  const lastId = turns.at(-1)?.id;
 
   return (
     <aside
       className="panel"
       style={{ width: "var(--ai-w)", flex: "0 0 auto", display: "flex", flexDirection: "column", padding: "16px 16px" }}
     >
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 13 }}>
+      <div className="ai-head">
         <span className="micro">Deneb AI</span>
-        {turns.length > 0 && (
-          <button
-            className="row-btn"
-            onClick={clear}
-            disabled={busy}
-            title="대화 지우기"
-            aria-label="대화 지우기"
-            style={{ marginLeft: 8, padding: 2, display: "inline-flex" }}
-          >
-            <Icon name="close" size={13} />
-          </button>
-        )}
+        <ModelPicker models={models} value={model} onChange={setModel} disabled={busy} />
+        <button
+          className={"row-btn" + (sessionsOpen ? " active" : "")}
+          onClick={toggleSessions}
+          title="대화 기록"
+          aria-label="대화 기록"
+          style={{ padding: 4, display: "inline-flex" }}
+        >
+          <Icon name="history" size={15} />
+        </button>
         <span
           className={"live-dot" + (connected ? " pulse" : "")}
-          style={{ marginLeft: "auto", background: connected ? "var(--online)" : "var(--faint)" }}
+          style={{ background: connected ? "var(--online)" : "var(--faint)" }}
         />
       </div>
+
+      {sessionsOpen && (
+        <SessionDrawer
+          sessions={sessions}
+          currentKey={sessionKey}
+          busy={busy}
+          error={sessionErr}
+          onSelect={selectSession}
+          onDelete={removeSession}
+          onNew={newChat}
+        />
+      )}
 
       <ProactivePanel cfg={cfg} />
 
@@ -89,7 +214,17 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
           turns.map((turn) => (
             <div key={turn.id} className={`ai-turn ${turn.role} ${turn.status}`}>
               <div className="ai-turn-label">{turn.role === "user" ? "나" : "Deneb"}</div>
-              <div className="ai-turn-body">{turn.text || "응답 대기 중…"}</div>
+              {turn.role === "user" ? <div className="ai-turn-body">{turn.text}</div> : <AssistantBody turn={turn} />}
+              {/* Regenerate only the last streamed reply (transcript-loaded turns have no parts). */}
+              {turn.role === "assistant" &&
+                turn.id === lastId &&
+                turn.parts &&
+                !busy &&
+                turn.status !== "streaming" && (
+                  <button className="row-btn ai-regen" onClick={regenerate} title="다시 생성">
+                    <Icon name="refresh" size={12} /> 다시 생성
+                  </button>
+                )}
             </div>
           ))
         )}
@@ -117,15 +252,28 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
             submit();
           }}
         />
-        <button
-          type="submit"
-          className="btn btn-accent"
-          disabled={busy || !connected || input.trim().length === 0}
-          aria-label="전송"
-          style={{ width: 38, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-        >
-          <Icon name="send" size={17} />
-        </button>
+        {busy ? (
+          <button
+            type="button"
+            className="btn ai-stop"
+            onClick={stop}
+            aria-label="중단"
+            title="응답 중단"
+            style={{ width: 38, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <Icon name="stop" size={15} />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="btn btn-accent"
+            disabled={!connected || input.trim().length === 0}
+            aria-label="전송"
+            style={{ width: 38, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <Icon name="send" size={17} />
+          </button>
+        )}
       </form>
     </aside>
   );

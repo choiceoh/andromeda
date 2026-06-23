@@ -20,7 +20,15 @@ export type IconName =
   | "close"
   | "win-min"
   | "win-max"
-  | "settings";
+  | "settings"
+  | "check"
+  | "copy"
+  | "stop"
+  | "refresh"
+  | "history"
+  | "plus"
+  | "trash"
+  | "chevron-down";
 
 const PATHS: Record<IconName, ReactNode> = {
   today: (
@@ -105,6 +113,35 @@ const PATHS: Record<IconName, ReactNode> = {
       <circle cx="12" cy="17" r="2" />
     </>
   ),
+  check: <path d="M5 12.5l4.2 4.2L19 7" />,
+  copy: (
+    <>
+      <rect x="8" y="8" width="11.5" height="12.5" rx="2.2" />
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+    </>
+  ),
+  stop: <rect x="6.5" y="6.5" width="11" height="11" rx="2.4" />,
+  refresh: (
+    <>
+      <path d="M19.6 12a7.6 7.6 0 1 1-2.3-5.4" />
+      <path d="M19.8 4.4V9h-4.6" />
+    </>
+  ),
+  history: (
+    <>
+      <path d="M3.6 12a8.4 8.4 0 1 0 2.7-6.2" />
+      <path d="M3.2 4.6v3.7h3.7" />
+      <path d="M12 7.7V12l3 1.8" />
+    </>
+  ),
+  plus: <path d="M12 5v14M5 12h14" />,
+  trash: (
+    <>
+      <path d="M4.5 7h15M9.4 7V5.3A1.3 1.3 0 0 1 10.7 4h2.6a1.3 1.3 0 0 1 1.3 1.3V7" />
+      <path d="M6.6 7l.8 12.1A1.6 1.6 0 0 0 9 20.6h6a1.6 1.6 0 0 0 1.6-1.5L17.4 7" />
+    </>
+  ),
+  "chevron-down": <path d="M5 9l7 7 7-7" />,
 };
 
 export function Icon({
