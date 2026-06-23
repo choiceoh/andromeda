@@ -186,6 +186,69 @@ export const sessionTranscript = (cfg: GatewayConfig, sessionKey: string, limit 
 export const deleteSession = (cfg: GatewayConfig, sessionKey: string) =>
   callRpc<{ deleted: boolean }>(cfg, "miniapp.sessions.delete", { sessionKey }).then((r) => Boolean(r.deleted));
 
+// --- Mail enrichment (miniapp.gmail.analyze / analysis_cached / sender_context / ask) ---
+
+// A related project wiki page surfaced by mail analysis. Mirrors gmail_analyze.go ProjectRef.
+export interface ProjectRef {
+  path: string;
+  title?: string;
+  summary?: string;
+}
+
+// AI analysis of one message (analyze / analysis_cached). `analysis` is Markdown;
+// `analysisQuality` is the importance tier; cached=false + empty analysis = a miss.
+export interface MailAnalysis {
+  id: string;
+  analysis: string;
+  relatedProjects?: ProjectRef[];
+  cached: boolean;
+  createdAt?: string;
+  analysisQuality?: string;
+  calendarProposalCount?: number;
+  todoCount?: number;
+}
+
+export const cachedMailAnalysis = (cfg: GatewayConfig, id: string) =>
+  callRpc<MailAnalysis>(cfg, "miniapp.gmail.analysis_cached", { id });
+
+export const analyzeMail = (cfg: GatewayConfig, id: string, force = false) =>
+  callRpc<MailAnalysis>(cfg, "miniapp.gmail.analyze", { id, force });
+
+// Sender context card (sender_context): recent volume + hand-curated wiki pages.
+export interface SenderRecent {
+  count: number;
+  lastReceivedAt?: string;
+  windowDays: number;
+  truncated?: boolean;
+}
+export interface SenderWikiHit {
+  path: string;
+  title?: string;
+  summary?: string;
+  category?: string;
+}
+export interface SenderContext {
+  sender: string;
+  email?: string;
+  displayName?: string;
+  recent?: SenderRecent;
+  wikiHits?: SenderWikiHit[];
+  wikiFacts?: string;
+  notices?: string[];
+}
+
+export const senderContext = (cfg: GatewayConfig, sender: string) =>
+  callRpc<SenderContext>(cfg, "miniapp.gmail.sender_context", { sender });
+
+// One prior turn of mail Q&A — the client accumulates these so the gateway stays stateless.
+export interface QATurn {
+  q: string;
+  a: string;
+}
+
+export const askMail = (cfg: GatewayConfig, id: string, question: string, history: QATurn[] = []) =>
+  callRpc<{ answer: string }>(cfg, "miniapp.gmail.ask", { id, question, history }).then((r) => r.answer);
+
 // --- Chat streaming over POST /api/v1/miniapp/chat/stream (SSE) ---
 
 // One tool lifecycle frame, parsed from the gateway's `tool` SSE event

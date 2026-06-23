@@ -972,6 +972,120 @@ textarea {
   line-height: 1.7;
 }
 
+/* mail detail: action bar + enrichment cards (분석 · 발신자 · 질문) */
+.mail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+.mail-actions .btn {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+.mail-card {
+  margin-top: 13px;
+  padding: 11px 13px;
+  background: var(--panel-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+}
+.mail-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.mail-card-title {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+/* standalone titles (발신자 · 질문) sit on their own line above the card body;
+ * the AI-분석 title lives inside .mail-card-head and stays inline with the badge */
+.mail-card > .mail-card-title {
+  margin-bottom: 7px;
+}
+.mail-card-head .row-btn {
+  margin-left: auto;
+  font-size: 11px;
+}
+.mail-card-line {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.mail-card-line.error {
+  color: var(--due);
+}
+.mail-card-facts {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.mail-badge {
+  padding: 1px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+}
+.mail-badge.hot {
+  color: var(--due);
+  background: var(--due-soft);
+  border-color: transparent;
+}
+.mail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.mail-chip {
+  padding: 3px 9px;
+  font-size: 12px;
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+.mail-chip:hover {
+  filter: brightness(0.96);
+}
+.mail-qa {
+  margin-bottom: 9px;
+}
+.mail-qa-q {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+.mail-qa-a {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.mail-ask {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.mail-ask .field {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+.mail-ask .btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
 /* today section header */
 .sec-head {
   display: flex;

@@ -90,6 +90,10 @@ export const MAIL_RPC = {
   markRead: "miniapp.gmail.mark_read",
   archive: "miniapp.gmail.archive",
   trash: "miniapp.gmail.trash",
+  analyze: "miniapp.gmail.analyze",
+  analysisCached: "miniapp.gmail.analysis_cached",
+  senderContext: "miniapp.gmail.sender_context",
+  ask: "miniapp.gmail.ask",
 } as const;
 
 export const CRON_RPC = {
