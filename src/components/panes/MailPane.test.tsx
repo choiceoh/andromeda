@@ -37,7 +37,8 @@ describe("MailPane", () => {
     renderWithProviders(<MailPane />, { connected: true, dataProvider });
 
     expect(screen.getByText("캐시된 메일")).toBeInTheDocument();
-    expect(screen.getByText("먼저 보이는 내용")).toBeInTheDocument();
+    // 목록은 제목만 — 메일 초입부 한 줄(스니펫)은 표시하지 않는다.
+    expect(screen.queryByText("먼저 보이는 내용")).not.toBeInTheDocument();
   });
 
   it("renders a cached mail body immediately while the detail refresh is still pending", async () => {
