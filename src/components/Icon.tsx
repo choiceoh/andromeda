@@ -17,7 +17,9 @@ export type IconName =
   | "send"
   | "bell"
   | "arrow-right"
-  | "close";
+  | "close"
+  | "win-min"
+  | "win-max";
 
 const PATHS: Record<IconName, ReactNode> = {
   today: (
@@ -91,6 +93,8 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   "arrow-right": <path d="M5 12h13M13 6.5l5.5 5.5-5.5 5.5" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  "win-min": <path d="M6 12h12" />,
+  "win-max": <rect x="5.5" y="5.5" width="13" height="13" rx="2.5" />,
 };
 
 export function Icon({

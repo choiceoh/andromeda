@@ -3,6 +3,7 @@ import { type GatewayConfig, saveConfig } from "@/gateway";
 import { useGatewayStatus } from "@/hooks";
 import { useWorkspace } from "@/workspaceContext";
 import { Icon } from "./Icon";
+import { WindowControls } from "./WindowControls";
 import { PANES } from "./panes";
 
 // Slim nav rail: registry-driven icon tabs (the active one lifts like a Zen tab)
@@ -25,6 +26,7 @@ export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: Gatew
 
   return (
     <nav
+      data-tauri-drag-region
       style={{
         width: "var(--rail-w)",
         flex: "0 0 auto",
@@ -35,6 +37,7 @@ export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: Gatew
         position: "relative",
       }}
     >
+      <WindowControls />
       {PANES.map((p, i) => (
         <button
           key={p.key}
