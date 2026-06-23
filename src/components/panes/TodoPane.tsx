@@ -4,7 +4,6 @@ import type { Todo } from "@/types";
 import { serializeList } from "@/aiText";
 import { useCachedList } from "@/cachedList";
 import { errText, fmtDate } from "@/format";
-import { field } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 import { Field, Modal } from "@/components/Modal";
@@ -45,7 +44,14 @@ export function TodoPane() {
     {
       header: "완료",
       width: 40,
-      cell: (t) => <input type="checkbox" checked={Boolean(t.done)} onChange={() => toggleTodo(t)} />,
+      cell: (t) => (
+        <input
+          type="checkbox"
+          checked={Boolean(t.done)}
+          onChange={() => toggleTodo(t)}
+          aria-label={`${t.title} 완료 토글`}
+        />
+      ),
     },
     {
       header: "제목",
@@ -79,7 +85,8 @@ export function TodoPane() {
       <h2 style={{ marginTop: 2 }}>할일</h2>
       <div style={{ display: "flex", gap: 6, marginBottom: 12, maxWidth: 540 }}>
         <input
-          style={{ ...field, flex: 1 }}
+          className="field"
+          style={{ flex: 1 }}
           placeholder="새 할일…"
           value={newTodo}
           onChange={(e) => setNewTodo(e.target.value)}
@@ -87,7 +94,7 @@ export function TodoPane() {
             if (e.key === "Enter") addTodo();
           }}
         />
-        <button onClick={addTodo} style={{ padding: "8px 14px" }}>
+        <button className="btn btn-accent" onClick={addTodo} style={{ padding: "8px 14px" }}>
           추가
         </button>
       </div>

@@ -257,6 +257,21 @@ textarea {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+.field:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* pane-level action feedback — error & status lines (mail/calendar/cron/workfeed/search/wiki) */
+.pane-error {
+  color: var(--due);
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+.pane-status {
+  font-size: 12px;
+  color: var(--muted);
+}
 .ai-compose {
   flex: 1;
   min-height: 68px;

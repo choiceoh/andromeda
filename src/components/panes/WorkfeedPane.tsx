@@ -80,7 +80,7 @@ export function WorkfeedPane() {
   return (
     <>
       <h2 style={{ marginTop: 2 }}>작업피드</h2>
-      {error && <p style={{ color: "var(--due)", fontSize: 12, margin: "0 0 8px" }}>오류: {error}</p>}
+      {error && <p className="pane-error">오류: {error}</p>}
       <GridNotice query={query} count={items.length} empty="작업피드가 비어 있습니다.">
         <Grid columns={columns} rows={items} getKey={(w) => String(w.id)} />
       </GridNotice>

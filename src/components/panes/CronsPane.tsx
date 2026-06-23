@@ -88,7 +88,7 @@ export function CronsPane() {
   return (
     <>
       <h2 style={{ marginTop: 2 }}>크론</h2>
-      {error && <p style={{ color: "var(--due)", fontSize: 12, margin: "0 0 8px" }}>오류: {error}</p>}
+      {error && <p className="pane-error">오류: {error}</p>}
       <GridNotice query={query} count={crons.length} empty="크론이 없습니다.">
         <Grid
           columns={columns}

@@ -3,7 +3,7 @@ import { callRpc } from "@/gateway";
 import { MEMORY_RPC } from "@/resources";
 import type { WikiPage } from "@/types";
 import { errText } from "@/format";
-import { color, field, font, line, muted } from "@/theme";
+import { color, font, line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Field, Modal } from "@/components/Modal";
 
@@ -94,7 +94,8 @@ export function WikiPane() {
     <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 12, height: "100%" }}>
       <div style={{ borderRight: line, paddingRight: 12, overflow: "auto" }}>
         <input
-          style={{ ...field, width: "100%", boxSizing: "border-box", fontSize: 12, marginBottom: 8 }}
+          className="field"
+          style={{ width: "100%", boxSizing: "border-box", fontSize: 12, marginBottom: 8 }}
           placeholder="위키 검색…"
           value={q}
           disabled={!connected}
@@ -140,19 +141,24 @@ export function WikiPane() {
       </div>
       <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>{path ?? "위키"}</h2>
-          <button onClick={() => void save()} disabled={!path} style={{ padding: "4px 10px" }}>
+          <h3 style={{ margin: 0 }}>{path ?? "위키"}</h3>
+          <button
+            className="btn btn-accent"
+            onClick={() => void save()}
+            disabled={!path}
+            style={{ padding: "5px 12px", fontSize: 12 }}
+          >
             저장
           </button>
-          {status && <span style={{ fontSize: 12, opacity: 0.6 }}>{status}</span>}
+          {status && <span className="pane-status">{status}</span>}
         </div>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           disabled={!path}
           placeholder={path ? "" : "왼쪽에서 페이지를 선택하면 편집할 수 있습니다."}
+          className="field"
           style={{
-            ...field,
             flex: 1,
             resize: "none",
             fontFamily: font,

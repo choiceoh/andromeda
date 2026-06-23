@@ -99,7 +99,7 @@ export function TodayPane() {
 
   return (
     <>
-      <h2 style={{ marginTop: 0 }}>
+      <h2 style={{ marginTop: 2 }}>
         오늘 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--muted-2)", letterSpacing: 0 }}>{today}</span>
       </h2>
       <p style={{ color: "var(--muted-2)", fontSize: 12, margin: "6px 0 20px", lineHeight: 1.5 }}>
@@ -131,6 +131,8 @@ function Section({ brief, index, onNav }: { brief: Brief; index: number; onNav: 
     <section className="fade-up" style={{ minWidth: 0, animationDelay: `${index * 60}ms` }}>
       <button
         onClick={onNav}
+        aria-label={`${label} 열기`}
+        title={`${label} 열기`}
         style={{
           display: "flex",
           alignItems: "baseline",

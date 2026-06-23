@@ -91,7 +91,7 @@ export function CalendarPane() {
           새 일정
         </button>
       </div>
-      {error && <p style={{ color: "var(--due)", fontSize: 12, margin: "8px 0 0" }}>오류: {error}</p>}
+      {error && <p className="pane-error">오류: {error}</p>}
 
       {connected && (
         <div style={{ marginTop: 14 }}>
