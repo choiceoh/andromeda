@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.0.12](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.11...andromeda-v0.0.12) (2026-06-23)
+
+
+### Features
+
+* cache direct rpc panes ([e74139d](https://github.com/choiceoh/andromeda/commit/e74139dfa0eba71607dedb4606fb7c0aa9479a6b))
+* cache direct rpc panes ([#78](https://github.com/choiceoh/andromeda/issues/78)) ([e74139d](https://github.com/choiceoh/andromeda/commit/e74139dfa0eba71607dedb4606fb7c0aa9479a6b))
+* 설정 폴리싱 — 탭 키보드 내비·전환감·hover 피드백 보강 ([#84](https://github.com/choiceoh/andromeda/issues/84)) ([bda0cfa](https://github.com/choiceoh/andromeda/commit/bda0cfab682508ce1b767cb96cd285a403056e54))
+* 설정에서 좌측 탭 순서 변경(▲▼) ([#75](https://github.com/choiceoh/andromeda/issues/75)) ([b73a24d](https://github.com/choiceoh/andromeda/commit/b73a24d0a1ad608eba612c50e88493ecec201e51))
+* 설정을 탭으로 분할하고 작업 영역 폭을 채움 ([#80](https://github.com/choiceoh/andromeda/issues/80)) ([ecd31c4](https://github.com/choiceoh/andromeda/commit/ecd31c4f7083e8e43a1e4bf48c0257eddd850338))
+* 애니메이션 폴리싱 강화 — 패널 전환·AI 턴/툴칩 등장·이징 통일 ([#82](https://github.com/choiceoh/andromeda/issues/82)) ([59d8093](https://github.com/choiceoh/andromeda/commit/59d80938f08dfcdbb41cba1c859cac3b48333392))
+* 오늘 대시보드 사용자 커스텀 — 섹션 표시/숨김 + 순서 (인라인 편집) ([#85](https://github.com/choiceoh/andromeda/issues/85)) ([3f86e57](https://github.com/choiceoh/andromeda/commit/3f86e5781a3b4a196de562578f14f0e6521d3fff))
+* 일정 달력 재설계 — 좌우폭 축소 + 우측 아젠다, borderless 그리드 ([#79](https://github.com/choiceoh/andromeda/issues/79)) ([4c73f7e](https://github.com/choiceoh/andromeda/commit/4c73f7e8f66bffccc7261ce9244ada3e826a41ae))
+* 좌하단을 설정 아이콘으로 — 사이드바 게이트웨이 IP/연결 버튼 제거 ([#77](https://github.com/choiceoh/andromeda/issues/77)) ([4f74f7c](https://github.com/choiceoh/andromeda/commit/4f74f7c1a03f527222808abb5c24b77e24de3971))
+* 채팅 입력창을 통합 컴포저로 — 자동 높이·버튼 내장 ([#76](https://github.com/choiceoh/andromeda/issues/76)) ([b9c531b](https://github.com/choiceoh/andromeda/commit/b9c531b5a9092e7c9c6c18a68ddd03d7baeec387))
+* 채팅에서 AI가 능동적으로 UI를 그려 답변 (deneb-ui) ([#81](https://github.com/choiceoh/andromeda/issues/81)) ([32325a4](https://github.com/choiceoh/andromeda/commit/32325a438db67be588368e0368890f4edd79e991))
+* 통합 검색을 구글식 중앙 정렬 → 검색 시 상단으로 ([#73](https://github.com/choiceoh/andromeda/issues/73)) ([609e249](https://github.com/choiceoh/andromeda/commit/609e249ec9aea4a05b6e01415cb3c61a416c5198))
+
 ## [0.0.11](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.10...andromeda-v0.0.11) (2026-06-23)
 
 
