@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { MEMORY_RPC } from "@/resources";
 import type { WikiPage } from "@/types";
 import { useRpc } from "@/useRpc";
-import { color, font, line, muted } from "@/theme";
+import { color, line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Field, Modal } from "@/components/Modal";
-import { Markdown } from "@/components/Markdown";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
 
 interface Category {
   name: string;
@@ -253,25 +253,14 @@ export function WikiPane() {
           </button>
           {status && <span className="pane-status">{status}</span>}
         </div>
-        {preview ? (
-          <div className="md-surface" style={{ flex: 1, overflow: "auto", minHeight: 0 }} aria-label="위키 미리보기">
-            <Markdown text={content} />
-          </div>
-        ) : (
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={!path}
-            className="field"
-            style={{
-              flex: 1,
-              resize: "none",
-              fontFamily: font,
-              fontSize: 13,
-              lineHeight: 1.5,
-            }}
-          />
-        )}
+        <MarkdownEditor
+          value={content}
+          onChange={setContent}
+          preview={preview}
+          disabled={!path}
+          fill
+          ariaLabel="위키 미리보기"
+        />
       </div>
       {creating && <NewPageModal onClose={() => setCreating(false)} onCreate={(p) => void createNewPage(p)} />}
     </div>

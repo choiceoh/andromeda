@@ -8,6 +8,7 @@
 // AI context and names the resource the AI's tool calls should invalidate.
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { GatewayConfig } from "./gateway";
+import { getJSON, setJSON } from "./storage";
 import type { View } from "./types";
 
 export interface PaneTarget {
@@ -40,6 +41,18 @@ interface WorkspaceCtx {
   wikiTarget: string | null;
   openWiki: (path: string) => void;
   consumeWikiTarget: () => void;
+  // Nav-rail customization: pane keys the user has hidden from the left rail
+  // (settings is never hideable — it's the way back). Persisted to localStorage.
+  hiddenViews: View[];
+  toggleViewHidden: (v: View) => void;
+}
+
+const HIDDEN_VIEWS_KEY = "andromeda.hiddenPanes";
+
+function readHiddenViews(): View[] {
+  const arr = getJSON<unknown[]>(HIDDEN_VIEWS_KEY);
+  if (Array.isArray(arr)) return arr.filter((v): v is View => typeof v === "string" && v !== "settings");
+  return [];
 }
 
 const Ctx = createContext<WorkspaceCtx | null>(null);
@@ -60,6 +73,12 @@ export function WorkspaceProvider({
   const [activeResource, setActiveResource] = useState<string | undefined>(undefined);
   const [wikiTarget, setWikiTarget] = useState<string | null>(null);
   const [paneTarget, setPaneTarget] = useState<PaneTarget | null>(null);
+  const [hiddenViews, setHiddenViews] = useState<View[]>(readHiddenViews);
+
+  const toggleViewHidden = (v: View) => {
+    if (v === "settings") return; // settings stays — it's the way back to this screen
+    setHiddenViews((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
+  };
 
   const registerPane = (resource: string | undefined, t: string) => {
     setActiveResource(resource);
@@ -76,6 +95,10 @@ export function WorkspaceProvider({
     setView(nextView);
   };
   const consumePaneTarget = () => setPaneTarget(null);
+
+  useEffect(() => {
+    setJSON(HIDDEN_VIEWS_KEY, hiddenViews);
+  }, [hiddenViews]);
 
   return (
     <Ctx.Provider
@@ -94,6 +117,8 @@ export function WorkspaceProvider({
         wikiTarget,
         openWiki,
         consumeWikiTarget,
+        hiddenViews,
+        toggleViewHidden,
       }}
     >
       {children}
