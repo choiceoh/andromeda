@@ -27,6 +27,10 @@ export interface PaneDef {
 
 export const PANES: PaneDef[] = [
   { key: "today", label: "오늘", shortcut: "0", Component: TodayPane },
+  // 채팅 — 비업무 전용 대화 탭. Workstation이 view==="chat"를 가로채 <ChatView/>(중앙 채팅 +
+  // 우측 세션)를 그리므로, 여기 Component는 렌더되지 않는 placeholder다. 레일 버튼·⌘T 단축키만
+  // 레지스트리에서 파생된다.
+  { key: "chat", label: "채팅", shortcut: "t", Component: () => null },
   // Digits 0–9 are taken; this dashboard-style overview gets a letter shortcut (⌘P).
   { key: "progress", label: "진행", shortcut: "p", Component: ProgressPane },
   { key: "todo", label: "할일", shortcut: "1", Component: TodoPane },

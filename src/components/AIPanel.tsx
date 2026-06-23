@@ -16,7 +16,7 @@ import { ToolChip } from "./ToolChip";
 // One assistant reply: ordered text and tool chips. Each text span renders as
 // Markdown, with any ```deneb-ui block drawn as interactive UI (AssistantText);
 // transcript-loaded / pre-stream turns with no parts use the plain body.
-function AssistantBody({
+export function AssistantBody({
   turn,
   thinking,
   onUiSubmit,
@@ -55,7 +55,7 @@ function AssistantBody({
 // text from the workspace context and streams a reply with Markdown + tool
 // chips; a model picker drives the per-turn model and a history drawer switches
 // conversations. Tool calls that mutate data refresh the active grid (useChat).
-export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
+export function AIPanel({ cfg, hidden = false }: { cfg: GatewayConfig; hidden?: boolean }) {
   const { aiText, activeResource, connected } = useWorkspace();
   const { thinking, busy, turns, send, stop, regenerate, clear, setTurns } = useChat(cfg);
   const [input, setInput] = useState("");
@@ -110,7 +110,13 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
   return (
     <aside
       className="panel"
-      style={{ width: "var(--ai-w)", flex: "0 0 auto", display: "flex", flexDirection: "column", padding: "16px 16px" }}
+      style={{
+        width: "var(--ai-w)",
+        flex: "0 0 auto",
+        display: hidden ? "none" : "flex",
+        flexDirection: "column",
+        padding: "16px 16px",
+      }}
     >
       <div className="ai-head">
         <span className="micro">Deneb AI</span>

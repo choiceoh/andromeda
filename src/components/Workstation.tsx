@@ -3,6 +3,7 @@ import type { GatewayConfig } from "@/gateway";
 import type { View } from "@/types";
 import { useWorkspace } from "@/workspaceContext";
 import { AIPanel } from "./AIPanel";
+import { ChatView } from "./ChatView";
 import { Sidebar } from "./Sidebar";
 import { PANES } from "./panes";
 
@@ -49,12 +50,18 @@ export function Workstation({ cfg }: { cfg: GatewayConfig }) {
           and the top-left controls. */}
       <div className="drag-strip" data-tauri-drag-region />
       <Sidebar />
-      <main className="panel" style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "20px 22px" }}>
-        <div key={view} className="pane-enter">
-          <Active />
-        </div>
-      </main>
-      <AIPanel cfg={cfg} />
+      {/* 채팅 탭(비업무) → 중앙 채팅 컬럼 + 우측 세션 목록. 그 외 탭 → 작업 pane. */}
+      {view === "chat" ? (
+        <ChatView cfg={cfg} />
+      ) : (
+        <main className="panel" style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "20px 22px" }}>
+          <div key={view} className="pane-enter">
+            <Active />
+          </div>
+        </main>
+      )}
+      {/* 측면 데네브 협업 패널은 항상 마운트(대화 유지). 채팅 탭에선 숨긴다. */}
+      <AIPanel cfg={cfg} hidden={view === "chat"} />
     </div>
   );
 }
