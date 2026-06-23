@@ -126,4 +126,34 @@ describe("Workstation (connected, fixtures)", () => {
     expect(screen.getByText(/현재 오늘 화면의 핵심만/)).toBeInTheDocument();
     expect(await screen.findByText("요약했습니다")).toBeInTheDocument();
   });
+
+  it("renders the assistant reply as Markdown and tool calls as chips", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/miniapp/chat/stream")) {
+        return sseResponse(
+          'event: delta\ndata: {"delta":"**완료**했습니다."}\n\n' +
+            'event: tool\ndata: {"state":"started","tool":"gmail.list_recent","toolUseId":"tu1"}\n\n' +
+            'event: tool\ndata: {"state":"completed","tool":"gmail.list_recent","toolUseId":"tu1","detail":"메일 3건"}\n\n' +
+            'event: done\ndata: {"text":"**완료**했습니다."}\n\n',
+        );
+      }
+      return sseResponse();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithProviders(<AIPanel cfg={{ url: "http://test", token: "tok" }} />, { connected: true });
+
+    const composer = screen.getByRole("textbox", { name: "Deneb에게 메시지" });
+    await user.type(composer, "메일 정리해줘");
+    await user.keyboard("{Enter}");
+
+    // Markdown: the reply's **완료** becomes a <strong>, not literal asterisks.
+    const bold = await screen.findByText("완료");
+    expect(bold.tagName).toBe("STRONG");
+    // Tool chip: the gateway's tool frame renders as a labelled chip with its detail.
+    expect(screen.getByText("gmail list recent")).toBeInTheDocument();
+    expect(screen.getByText("메일 3건")).toBeInTheDocument();
+  });
 });

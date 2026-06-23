@@ -6,7 +6,7 @@ import { dayKey, eventTitle, hhmm, monthLabel, monthMatrix } from "@/format";
 import { Icon } from "@/components/Icon";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
-const MAX_CHIPS = 3; // beyond this a "+N" overflow note keeps cells from growing
+const MAX_CHIPS = 2; // beyond this a "+N" overflow note keeps cells short
 
 // Category → chip tint (semantic, via theme tokens). Most upcoming events are the
 // user's own, so an absent category styles as "mine".
@@ -21,6 +21,8 @@ export function MonthGrid({
   month0,
   eventsByDay,
   todayKey,
+  selectedKey,
+  onSelectDay,
   onPrev,
   onNext,
   onToday,
@@ -29,6 +31,8 @@ export function MonthGrid({
   month0: number;
   eventsByDay: Map<string, CalEvent[]>;
   todayKey: string;
+  selectedKey?: string | null;
+  onSelectDay?: (key: string) => void;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
@@ -65,9 +69,40 @@ export function MonthGrid({
           const inMonth = date.getMonth() === month0;
           const dayEvents = eventsByDay.get(key) ?? [];
           const shown = dayEvents.slice(0, MAX_CHIPS);
-          const cls = ["cal-cell", inMonth ? "" : "out", key === todayKey ? "cal-today" : ""].filter(Boolean).join(" ");
+          const selected = inMonth && key === selectedKey;
+          const cls = [
+            "cal-cell",
+            inMonth ? "" : "out",
+            key === todayKey ? "cal-today" : "",
+            selected ? "cal-selected" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          // Only in-month days are selectable targets (out-of-month days are context).
           return (
-            <div key={key} className={cls}>
+            <div
+              key={key}
+              className={cls}
+              role={inMonth ? "button" : undefined}
+              tabIndex={inMonth ? 0 : undefined}
+              aria-pressed={inMonth ? selected : undefined}
+              aria-label={
+                inMonth
+                  ? `${month0 + 1}월 ${date.getDate()}일${dayEvents.length ? `, 일정 ${dayEvents.length}건` : ""}`
+                  : undefined
+              }
+              onClick={inMonth ? () => onSelectDay?.(key) : undefined}
+              onKeyDown={
+                inMonth
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelectDay?.(key);
+                      }
+                    }
+                  : undefined
+              }
+            >
               <span className="cal-daynum">{date.getDate()}</span>
               {shown.map((ev, i) => {
                 const t = hhmm(ev.start);

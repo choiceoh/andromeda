@@ -43,4 +43,22 @@ describe("App against the mock gateway (real stack)", () => {
     expect(await within(detail).findByText(/분기 리뷰 일정을 확정합니다/)).toBeInTheDocument();
     expect(within(detail).getByText(/회의 전까지 초안 자료를 공유/)).toBeInTheDocument();
   });
+
+  it("populates the AI model picker from miniapp.models.list", async () => {
+    render(<App />);
+    const picker = await screen.findByRole("combobox", { name: "모델 선택" });
+    expect(within(picker).getByRole("option", { name: /Claude Opus 4.8/ })).toBeInTheDocument();
+    expect(within(picker).getByRole("option", { name: /Qwen3 30B/ })).toBeInTheDocument();
+  });
+
+  it("loads a past conversation's transcript from the history drawer", async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "대화 기록" }));
+    // sessions.recent rows render in the drawer
+    await userEvent.click(await screen.findByText("메인 대화"));
+    // selecting the session loads its transcript (Markdown-rendered) into the log
+    const log = screen.getByRole("log", { name: "Deneb 대화" });
+    expect(await within(log).findByText("오늘 일정")).toBeInTheDocument();
+    expect(within(log).getByText(/기획 리뷰/)).toBeInTheDocument();
+  });
 });

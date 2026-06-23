@@ -33,6 +33,7 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.gmail.trash": (p) => ({ id: p.id, ok: true }),
 
   "miniapp.calendar.list_upcoming": () => ({ events: fx.events }),
+  "miniapp.calendar.list_range": (p) => ({ events: fx.eventsInRange(String(p.from ?? ""), String(p.to ?? "")) }),
   "miniapp.calendar.get": (p) => fx.events.find((e) => String(e.id) === String(p.id)) ?? null,
   "miniapp.calendar.create": (p) => ({ id: `e${Date.now()}`, local: true, ...p }),
   "miniapp.calendar.update": (p) => ({ ...p }),
@@ -65,6 +66,16 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.memory.create_page": (p) => ({ path: p.path, title: p.path, body: "" }),
 
   "miniapp.search.all": (p) => fx.searchAll(typeof p.query === "string" ? p.query : ""),
+
+  // Model picker + conversation history (AI panel).
+  "miniapp.models.list": () => fx.models,
+  "miniapp.models.set": (p) => ({ ok: true, role: p.role ?? "main", current: p.id }),
+  "miniapp.sessions.recent": () => ({ sessions: fx.sessions, count: fx.sessions.length }),
+  "miniapp.sessions.transcript": (p) => {
+    const messages = fx.transcript[String(p.sessionKey)] ?? [];
+    return { sessionKey: p.sessionKey, messages, total: messages.length };
+  },
+  "miniapp.sessions.delete": () => ({ deleted: true }),
 };
 
 function sse(frames: string[]) {
