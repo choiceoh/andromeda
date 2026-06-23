@@ -292,34 +292,6 @@ textarea {
   line-height: 1.45;
   resize: vertical;
 }
-.ai-quick-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.quick-action {
-  border: 1px solid var(--line-2);
-  background: var(--panel-sunken);
-  color: var(--ink-2);
-  border-radius: var(--radius-pill);
-  padding: 5px 9px;
-  font-size: 12px;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-.quick-action:hover:not(:disabled) {
-  background: var(--accent-soft);
-  border-color: rgba(193, 122, 91, 0.28);
-  color: var(--accent-deep);
-}
-.quick-action:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
 .ai-transcript {
   flex: 1;
   min-height: 0;
