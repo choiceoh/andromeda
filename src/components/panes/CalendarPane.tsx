@@ -5,55 +5,14 @@ import type { CalEvent } from "@/types";
 import { serializeList } from "@/aiText";
 import { useCachedList } from "@/cachedList";
 import { chatStream, type GatewayConfig } from "@/gateway";
-import {
-  calSpan,
-  calStamp,
-  dayKey,
-  errText,
-  eventDayKeys,
-  eventEndMs,
-  eventTitle,
-  monthLabel,
-  monthMatrix,
-} from "@/format";
+import { calSpan, calStamp, dayKey, errText, eventDayKeys, eventEndMs, eventTitle } from "@/format";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { GridNotice, RowBtn } from "@/components/Grid";
 import { MonthGrid } from "@/components/MonthGrid";
 import { Detail, Field, Modal } from "@/components/Modal";
 import { Markdown } from "@/components/Markdown";
-
-// RFC3339 → <input type="datetime-local"> value (local wall-clock, minute precision).
-function toLocalInput(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function visibleRangeForMonth(year: number, month0: number) {
-  const weeks = monthMatrix(year, month0);
-  const first = weeks[0][0];
-  const lastWeek = weeks[weeks.length - 1];
-  const last = lastWeek[lastWeek.length - 1];
-  const to = new Date(last);
-  to.setDate(to.getDate() + 1);
-  const from = first.toISOString();
-  const toIso = to.toISOString();
-  return {
-    from,
-    to: toIso,
-    cacheKey: `calendar-range.${from}.${toIso}`,
-    label: monthLabel(year, month0),
-  };
-}
-
-function parseDayKey(key?: string): Date | null {
-  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(key ?? "");
-  if (!m) return null;
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-}
+import { parseDayKey, toLocalInput, visibleRangeForMonth } from "./calendarHelpers";
 
 export function CalendarPane() {
   const { connected, cfg, consumePaneTarget, paneTarget } = useWorkspace();
