@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { WorkItem } from "@/types";
 import { serializeList } from "@/aiText";
 import { useCachedList } from "@/cachedList";
 import { WORKFEED_RPC } from "@/resources";
 import { fmtDate } from "@/format";
+import { usePaneTarget } from "@/usePaneTarget";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
@@ -15,17 +16,13 @@ const isQuestion = (w: WorkItem) => (w.source ?? "").includes("question");
 type RunFn = (method: string, params?: Record<string, unknown>) => void;
 
 export function WorkfeedPane() {
-  const { connected, consumePaneTarget, paneTarget } = useWorkspace();
+  const { connected } = useWorkspace();
   const { result, query } = useCachedList<WorkItem>("workfeed", connected);
   const items = result?.data ?? [];
   const [selectedId, setSelectedId] = useState<string | number | undefined>();
   const { run, error, busy } = useAction(() => void query.refetch());
 
-  useEffect(() => {
-    if (paneTarget?.view !== "workfeed" || paneTarget.id === undefined) return;
-    setSelectedId(paneTarget.id);
-    consumePaneTarget();
-  }, [consumePaneTarget, paneTarget]);
+  usePaneTarget("workfeed", setSelectedId);
 
   const aiText = serializeList(
     "작업피드",

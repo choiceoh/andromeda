@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useCreate, useDelete, useUpdate } from "@refinedev/core";
 import type { Todo } from "@/types";
 import { serializeList } from "@/aiText";
 import { useCachedList } from "@/cachedList";
 import { errText, fmtDate } from "@/format";
+import { usePaneTarget } from "@/usePaneTarget";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
-import { Field, Modal } from "@/components/Modal";
+import { Field, Modal, ModalFooter } from "@/components/Modal";
 
 export function TodoPane() {
-  const { connected, consumePaneTarget, paneTarget } = useWorkspace();
+  const { connected } = useWorkspace();
   // null = closed · "new" = add modal · Todo = edit that todo.
   const [modal, setModal] = useState<Todo | "new" | null>(null);
   const { result, query } = useCachedList<Todo>("todo", connected);
@@ -17,12 +18,15 @@ export function TodoPane() {
   const { mutate: updateTodo } = useUpdate();
   const { mutate: deleteTodo } = useDelete();
 
-  useEffect(() => {
-    if (paneTarget?.view !== "todo" || paneTarget.id === undefined) return;
-    const match = todos.find((t) => String(t.id) === String(paneTarget.id));
-    if (match) setModal(match);
-    if (!query.isLoading) consumePaneTarget();
-  }, [consumePaneTarget, paneTarget, query.isLoading, todos]);
+  // Deep-link: open the matching todo's edit modal when another pane targets it.
+  const openTargetedTodo = useCallback(
+    (id: string | number) => {
+      const match = todos.find((t) => String(t.id) === String(id));
+      if (match) setModal(match);
+    },
+    [todos],
+  );
+  usePaneTarget("todo", openTargetedTodo, query.isLoading);
 
   // Serialize the grid to text so Deneb's AI reads exactly what's on screen.
   const aiText = serializeList(
@@ -139,21 +143,7 @@ function TodoModal({ todo, onClose, onSaved }: { todo: Todo | null; onClose: () 
     <Modal
       title={todo ? "할일 수정" : "할일 추가"}
       onClose={onClose}
-      footer={
-        <>
-          {status && (
-            <span className="pane-status" style={{ marginRight: "auto" }}>
-              {status}
-            </span>
-          )}
-          <button className="btn" onClick={onClose}>
-            취소
-          </button>
-          <button className="btn btn-accent" onClick={save}>
-            저장
-          </button>
-        </>
-      }
+      footer={<ModalFooter action="저장" status={status} onClose={onClose} onSubmit={save} />}
     >
       <Field label="제목">
         <input className="field" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
