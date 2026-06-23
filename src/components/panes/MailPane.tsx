@@ -1,17 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Mail } from "@/types";
 import { serializeList } from "@/aiText";
 import { useCachedList, useCachedOne } from "@/cachedList";
 import { MAIL_RPC } from "@/resources";
 import { color, ellipsis } from "@/theme";
 import { fmtMailDate, senderName } from "@/format";
+import { usePaneTarget } from "@/usePaneTarget";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice } from "@/components/Grid";
 import { MailDetail, mailBody } from "./MailDetail";
 
 export function MailPane() {
-  const { connected, consumePaneTarget, paneTarget } = useWorkspace();
+  const { connected } = useWorkspace();
   const { result, query } = useCachedList<Mail>("mail", connected);
   const mails = result?.data ?? [];
   const [selectedId, setSelectedId] = useState<string | number | undefined>();
@@ -20,11 +21,7 @@ export function MailPane() {
   const selectedMail = detail.result ?? selectedPreview;
   const { run, error, busy } = useAction(() => void query.refetch());
 
-  useEffect(() => {
-    if (paneTarget?.view !== "mail" || paneTarget.id === undefined) return;
-    setSelectedId(paneTarget.id);
-    consumePaneTarget();
-  }, [consumePaneTarget, paneTarget]);
+  usePaneTarget("mail", setSelectedId);
 
   // Mirror the grid (subject · sender · date) so the AI sees what the user sees.
   const listText = serializeList("메일", mails, (m) => {

@@ -126,3 +126,37 @@ export function Detail({ label, value, multiline }: { label: string; value: Reac
     </div>
   );
 }
+
+// The standard modal footer: a optional left-aligned status line, a 취소 button,
+// and an accent action button that stays disabled until `canSubmit`. Extracted so
+// every form modal (OneFieldModal, TodoModal, NotebookPane's modals…) renders the
+// identical footer instead of re-laying it out each time.
+export function ModalFooter({
+  action,
+  canSubmit = true,
+  status,
+  onClose,
+  onSubmit,
+}: {
+  action: string;
+  canSubmit?: boolean;
+  status?: string;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <>
+      {status && (
+        <span className="pane-status" style={{ marginRight: "auto" }}>
+          {status}
+        </span>
+      )}
+      <button className="btn" onClick={onClose}>
+        취소
+      </button>
+      <button className="btn btn-accent" onClick={onSubmit} disabled={!canSubmit}>
+        {action}
+      </button>
+    </>
+  );
+}

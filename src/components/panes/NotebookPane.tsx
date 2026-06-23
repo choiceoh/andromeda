@@ -7,7 +7,7 @@ import { useCachedRpc } from "@/useCachedRpc";
 import { color, line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Icon } from "@/components/Icon";
-import { Field, Modal } from "@/components/Modal";
+import { Field, Modal, ModalFooter } from "@/components/Modal";
 import { Markdown } from "@/components/Markdown";
 
 // Notebook (노트북) — a browser over Deneb's deal notebooks (miniapp.notebook.*).
@@ -275,16 +275,7 @@ function CreateNotebookModal({
       title="새 노트북"
       onClose={onClose}
       width={460}
-      footer={
-        <>
-          <button className="btn" onClick={onClose}>
-            취소
-          </button>
-          <button className="btn btn-accent" onClick={submit} disabled={!name.trim()}>
-            생성
-          </button>
-        </>
-      }
+      footer={<ModalFooter action="생성" canSubmit={Boolean(name.trim())} onClose={onClose} onSubmit={submit} />}
     >
       <Field label="이름">
         <input
@@ -317,21 +308,13 @@ function AddSourceModal({
 }) {
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
+  const add = () => text.trim() && onAdd(title, text);
   return (
     <Modal
       title={`인용자료 추가 — ${notebook}`}
       onClose={onClose}
       width={560}
-      footer={
-        <>
-          <button className="btn" onClick={onClose}>
-            취소
-          </button>
-          <button className="btn btn-accent" onClick={() => text.trim() && onAdd(title, text)} disabled={!text.trim()}>
-            추가
-          </button>
-        </>
-      }
+      footer={<ModalFooter action="추가" canSubmit={Boolean(text.trim())} onClose={onClose} onSubmit={add} />}
     >
       <Field label="제목 (선택)">
         <input className="field" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
