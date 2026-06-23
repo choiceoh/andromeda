@@ -6,11 +6,11 @@ import { useCachedList } from "@/cachedList";
 import { errText, fmtDate } from "@/format";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
+import { InputRow } from "@/components/InputRow";
 import { Field, Modal } from "@/components/Modal";
 
 export function TodoPane() {
   const { connected, consumePaneTarget, paneTarget } = useWorkspace();
-  const [newTodo, setNewTodo] = useState("");
   const [editing, setEditing] = useState<Todo | null>(null);
   const { result, query } = useCachedList<Todo>("todo", connected);
   const todos = useMemo(() => result?.data ?? [], [result?.data]);
@@ -34,12 +34,6 @@ export function TodoPane() {
   );
   useRegisterPane("todo", aiText);
 
-  function addTodo() {
-    const title = newTodo.trim();
-    if (!title) return;
-    setNewTodo("");
-    createTodo({ resource: "todo", values: { title } }, { onSuccess: () => void query.refetch() });
-  }
   function toggleTodo(t: Todo) {
     updateTodo({ resource: "todo", id: t.id, values: { done: !t.done } }, { onSuccess: () => void query.refetch() });
   }
@@ -90,21 +84,15 @@ export function TodoPane() {
   return (
     <>
       <h2 style={{ marginTop: 2 }}>할일</h2>
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, maxWidth: 540 }}>
-        <input
-          className="field"
-          style={{ flex: 1 }}
-          placeholder="새 할일…"
-          value={newTodo}
-          onChange={(e) => setNewTodo(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") addTodo();
-          }}
-        />
-        <button className="btn btn-accent" onClick={addTodo} style={{ padding: "8px 14px" }}>
-          추가
-        </button>
-      </div>
+      <InputRow
+        placeholder="새 할일…"
+        buttonLabel="추가"
+        onSubmit={(title) =>
+          createTodo({ resource: "todo", values: { title } }, { onSuccess: () => void query.refetch() })
+        }
+        style={{ marginBottom: 12, maxWidth: 540 }}
+        buttonStyle={{ padding: "8px 14px" }}
+      />
       <GridNotice query={query} count={todos.length} empty="할일이 없습니다.">
         <Grid
           columns={columns}

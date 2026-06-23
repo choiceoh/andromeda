@@ -7,6 +7,7 @@ import { fmtDate } from "@/format";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
+import { InputRow } from "@/components/InputRow";
 
 // Items sourced from a question expect a free-text reply, surfaced as an inline
 // box (sent via workfeed.feedback — the gateway records it and runs a turn).
@@ -91,14 +92,6 @@ export function WorkfeedPane() {
 function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: RunFn }) {
   const question = isQuestion(w);
   const [open, setOpen] = useState(question);
-  const [text, setText] = useState("");
-
-  const submit = () => {
-    const t = text.trim();
-    if (!t) return;
-    setText("");
-    run(WORKFEED_RPC.feedback, { itemId: w.id, feedback: t });
-  };
 
   return (
     <>
@@ -123,22 +116,15 @@ function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: Ru
         )}
       </div>
       {open && (
-        <div style={{ display: "flex", gap: 5, marginTop: 6, maxWidth: 460 }}>
-          <input
-            className="field"
-            style={{ flex: 1, fontSize: 12, padding: "5px 8px" }}
-            placeholder={question ? "답변 입력…" : "정정·피드백 입력…"}
-            value={text}
-            disabled={busy}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submit();
-            }}
-          />
-          <button className="chip" onClick={submit} disabled={busy || !text.trim()}>
-            {question ? "답변" : "보내기"}
-          </button>
-        </div>
+        <InputRow
+          placeholder={question ? "답변 입력…" : "정정·피드백 입력…"}
+          buttonLabel={question ? "답변" : "보내기"}
+          buttonClassName="chip"
+          disabled={busy}
+          onSubmit={(t) => run(WORKFEED_RPC.feedback, { itemId: w.id, feedback: t })}
+          style={{ marginTop: 6, gap: 5, maxWidth: 460 }}
+          inputStyle={{ fontSize: 12, padding: "5px 8px" }}
+        />
       )}
     </>
   );
