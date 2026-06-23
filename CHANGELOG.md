@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.13](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.12...andromeda-v0.0.13) (2026-06-23)
+
+
+### Features
+
+* 메일 본문에서 서명·인용·광고 chrome 제거 (Deneb 게이트웨이 포팅) ([#91](https://github.com/choiceoh/andromeda/issues/91)) ([57621bc](https://github.com/choiceoh/andromeda/commit/57621bce886034a31f57987fd5a1ba2932e8e3e8))
+* 애니메이션 폴리싱 2차 — 패널 전환 rise·thinking breathing·알림/드로어 등장 ([#92](https://github.com/choiceoh/andromeda/issues/92)) ([8efd748](https://github.com/choiceoh/andromeda/commit/8efd748b9d9c62d41ff6ebdd13a3e678769654b1))
+* 오늘 대시보드 섹션 카탈로그 확장 (진행·연락처·크론) ([#90](https://github.com/choiceoh/andromeda/issues/90)) ([63a7da5](https://github.com/choiceoh/andromeda/commit/63a7da574ad9ca44385d4a2983c84957446cdde7))
+
+
+### Bug Fixes
+
+* Windows 빈 아이콘 — icon.ico를 BMP 항목 형식으로 재생성 ([#86](https://github.com/choiceoh/andromeda/issues/86)) ([64471ba](https://github.com/choiceoh/andromeda/commit/64471bac83b7ee0cd971d5b2f2609dcc1f360fcb))
+* 일정 하단 패널 좌우폭을 상단 컬럼에 정렬 ([#93](https://github.com/choiceoh/andromeda/issues/93)) ([c6fac3e](https://github.com/choiceoh/andromeda/commit/c6fac3ed6f7ce0e1de255ad009d72ee8b79fe89b))
+
 ## [0.0.12](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.11...andromeda-v0.0.12) (2026-06-23)
 
 
