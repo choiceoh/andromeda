@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { callRpc } from "@/gateway";
 import { MEMORY_RPC } from "@/resources";
 import type { WikiPage } from "@/types";
-import { errText } from "@/format";
+import { useRpc } from "@/useRpc";
 import { color, font, line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Field, Modal } from "@/components/Modal";
@@ -18,7 +17,7 @@ export function WikiPane() {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [path, setPath] = useState<string | null>(null);
   const [content, setContent] = useState("");
-  const [status, setStatus] = useState("");
+  const { call, status, setStatus } = useRpc(cfg);
   const [creating, setCreating] = useState(false);
   const [preview, setPreview] = useState(false);
 
@@ -28,34 +27,33 @@ export function WikiPane() {
 
   async function search() {
     if (!connected) return;
-    setStatus("검색 중…");
-    try {
-      // Gateway memory.search wraps hits as { results: [...] } (memory.go);
-      // tolerate a bare array / legacy { pages } too so we never silently drop rows.
-      const res = await callRpc<WikiPage[] | { results?: WikiPage[]; pages?: WikiPage[] }>(cfg, MEMORY_RPC.search, {
-        query: q.trim(),
-      });
-      const list = Array.isArray(res) ? res : (res?.results ?? res?.pages ?? []);
-      setPages(list);
-      setStatus(list.length ? "" : "결과 없음");
-    } catch (e) {
-      setStatus(`오류: ${errText(e)}`);
-    }
+    // Gateway memory.search wraps hits as { results: [...] } (memory.go);
+    // tolerate a bare array / legacy { pages } too so we never silently drop rows.
+    const r = await call<WikiPage[] | { results?: WikiPage[]; pages?: WikiPage[] }>(
+      MEMORY_RPC.search,
+      { query: q.trim() },
+      "검색 중…",
+    );
+    if (!r.ok) return;
+    const list = Array.isArray(r.data) ? r.data : (r.data.results ?? r.data.pages ?? []);
+    setPages(list);
+    setStatus(list.length ? "" : "결과 없음");
   }
 
   async function openPath(key: string) {
     if (!key) return;
-    setStatus("불러오는 중…");
-    try {
-      // get_page returns the page body under `body` (memory.go out struct),
-      // not `content`. Keep string/`content` fallbacks for robustness.
-      const page = await callRpc<{ body?: string; content?: string } | string>(cfg, MEMORY_RPC.getPage, { path: key });
-      setPath(key);
-      setContent(typeof page === "string" ? page : (page?.body ?? page?.content ?? ""));
-      setStatus("");
-    } catch (e) {
-      setStatus(`오류: ${errText(e)}`);
-    }
+    // get_page returns the page body under `body` (memory.go out struct), not
+    // `content`. Keep string/`content` fallbacks for robustness.
+    const r = await call<{ body?: string; content?: string } | string>(
+      MEMORY_RPC.getPage,
+      { path: key },
+      "불러오는 중…",
+    );
+    if (!r.ok) return;
+    const page = r.data;
+    setPath(key);
+    setContent(typeof page === "string" ? page : (page?.body ?? page?.content ?? ""));
+    setStatus("");
   }
 
   // 인물 카드 / 검색 결과에서 넘어온 위키 경로를 열고 채널을 비운다.
@@ -68,28 +66,19 @@ export function WikiPane() {
 
   async function save() {
     if (!path) return;
-    setStatus("저장 중…");
-    try {
-      // write_page reads the body from `body` (memory_write.go). Sending it as
-      // `content` left body empty server-side and CLOBBERED the page to blank.
-      await callRpc(cfg, MEMORY_RPC.writePage, { path, body: content });
-      setStatus("저장됨");
-    } catch (e) {
-      setStatus(`오류: ${errText(e)}`);
-    }
+    // write_page reads the body from `body` (memory_write.go). Sending it as
+    // `content` left body empty server-side and CLOBBERED the page to blank.
+    const r = await call(MEMORY_RPC.writePage, { path, body: content }, "저장 중…");
+    if (r.ok) setStatus("저장됨");
   }
 
   async function createNewPage(newPath: string) {
     const p = newPath.trim();
     if (!p) return;
-    setStatus("생성 중…");
-    try {
-      await callRpc(cfg, MEMORY_RPC.createPage, { path: p });
-      setCreating(false);
-      await openPath(p);
-    } catch (e) {
-      setStatus(`오류: ${errText(e)}`);
-    }
+    const r = await call(MEMORY_RPC.createPage, { path: p }, "생성 중…");
+    if (!r.ok) return;
+    setCreating(false);
+    await openPath(p);
   }
 
   return (
