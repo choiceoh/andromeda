@@ -6,8 +6,27 @@ import { errText } from "@/format";
 import { field, line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
-// Unified search (search.all) — query-driven, so it calls the RPC directly rather
-// than through the CRUD data provider.
+// search.all fans out across wiki / diary / people buckets server-side. Flatten the
+// three lists into one typed result stream (matching the gateway wire shape) while
+// tolerating a legacy bare-array response.
+interface SearchAllResult {
+  wiki?: Array<{ path?: string; title?: string; summary?: string; category?: string; snippet?: string }>;
+  diary?: Array<{ file?: string; header?: string; content?: string }>;
+  people?: Array<{ email?: string; name?: string; lastSubject?: string; wikiSummary?: string; wikiPath?: string }>;
+}
+
+function flatten(res: SearchAllResult | SearchHit[] | null): SearchHit[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  const out: SearchHit[] = [];
+  for (const w of res.wiki ?? [])
+    out.push({ type: "위키", path: w.path, title: w.title, category: w.category, snippet: w.snippet || w.summary });
+  for (const d of res.diary ?? []) out.push({ type: "다이어리", path: d.file, title: d.header, snippet: d.content });
+  for (const p of res.people ?? [])
+    out.push({ type: "인물", path: p.wikiPath, title: p.name || p.email, snippet: p.lastSubject || p.wikiSummary });
+  return out;
+}
+
 export function SearchPane() {
   const { connected, cfg } = useWorkspace();
   const [q, setQ] = useState("");
@@ -27,8 +46,8 @@ export function SearchPane() {
     if (!query || !connected) return;
     setStatus("검색 중…");
     try {
-      const res = await callRpc<SearchHit[] | { hits?: SearchHit[] }>(cfg, SEARCH_RPC, { query });
-      const list = Array.isArray(res) ? res : (res?.hits ?? []);
+      const res = await callRpc<SearchAllResult | SearchHit[]>(cfg, SEARCH_RPC, { query });
+      const list = flatten(res);
       setHits(list);
       setStatus(list.length ? "" : "결과 없음");
     } catch (e) {
@@ -43,7 +62,7 @@ export function SearchPane() {
       <div style={{ display: "flex", gap: 6, marginBottom: 12, maxWidth: 640 }}>
         <input
           style={{ ...field, flex: 1 }}
-          placeholder={connected ? "메일·일정·위키·연락처 통합 검색…" : "먼저 게이트웨이에 연결하세요"}
+          placeholder={connected ? "위키·다이어리·연락처 통합 검색…" : "먼저 게이트웨이에 연결하세요"}
           value={q}
           disabled={!connected}
           onChange={(e) => setQ(e.target.value)}
@@ -51,15 +70,20 @@ export function SearchPane() {
             if (e.key === "Enter") void run();
           }}
         />
-        <button onClick={() => void run()} disabled={!connected} style={{ padding: "8px 14px" }}>
+        <button
+          className="btn btn-accent"
+          onClick={() => void run()}
+          disabled={!connected}
+          style={{ padding: "8px 14px" }}
+        >
           검색
         </button>
       </div>
       {status && <p style={muted}>{status}</p>}
       <div style={{ display: "grid", gap: 8, maxWidth: 760 }}>
         {hits.map((h, i) => (
-          <div key={h.id ?? i} style={{ borderTop: line, paddingTop: 8 }}>
-            {h.type && <div style={{ fontSize: 12, opacity: 0.5 }}>{h.type}</div>}
+          <div key={(h.path ?? h.id ?? i) + String(i)} style={{ borderTop: line, paddingTop: 8 }}>
+            {h.type && <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: "0.02em" }}>{h.type}</div>}
             <div style={{ fontWeight: 600 }}>{h.title ?? "(제목 없음)"}</div>
             {h.snippet && <div style={{ opacity: 0.7, fontSize: 13 }}>{h.snippet}</div>}
           </div>

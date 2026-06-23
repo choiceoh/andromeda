@@ -19,11 +19,13 @@ export function text(v: unknown): string {
   return String(v);
 }
 
-// Render an ISO-ish timestamp compactly; pass through anything unparseable.
-export function fmtDate(v?: string): string {
-  if (!v) return "";
+// Render a timestamp compactly. Accepts an ISO-ish string OR epoch milliseconds
+// (the gateway uses both: RFC3339 for dates, `*AtMs` numbers for cron/workfeed).
+// Passes through anything unparseable.
+export function fmtDate(v?: string | number): string {
+  if (v == null || v === "") return "";
   const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
+  if (Number.isNaN(d.getTime())) return String(v);
   return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 

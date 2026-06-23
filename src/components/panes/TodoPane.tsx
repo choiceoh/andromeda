@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useCreate, useDelete, useList, useUpdate } from "@refinedev/core";
 import type { Todo } from "@/types";
 import { serializeList } from "@/aiText";
+import { fmtDate } from "@/format";
 import { field } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
-import { Column, Grid, GridNotice } from "@/components/Grid";
+import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 
 export function TodoPane() {
   const { connected } = useWorkspace();
@@ -19,7 +20,7 @@ export function TodoPane() {
   const aiText = serializeList(
     "할일",
     todos,
-    (t) => `- [${t.done ? "x" : " "}] ${t.title}${t.dueDate ? ` (마감 ${t.dueDate})` : ""}`,
+    (t) => `- [${t.done ? "x" : " "}] ${t.title}${t.due ? ` (마감 ${fmtDate(t.due)})` : ""}`,
   );
   useRegisterPane("todo", aiText);
 
@@ -48,18 +49,15 @@ export function TodoPane() {
         <span style={{ textDecoration: t.done ? "line-through" : "none", opacity: t.done ? 0.5 : 1 }}>{t.title}</span>
       ),
     },
-    { header: "마감", width: 110, cell: (t) => t.dueDate ?? "", tdStyle: { fontSize: 13, opacity: 0.7 } },
+    { header: "마감", width: 116, cell: (t) => fmtDate(t.due), tdStyle: { fontSize: 13, opacity: 0.7 } },
     {
       header: "",
-      width: 50,
+      width: 56,
+      tdStyle: { textAlign: "right" },
       cell: (t) => (
-        <button
-          onClick={() => removeTodo(t)}
-          title="삭제"
-          style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 15 }}
-        >
-          ×
-        </button>
+        <RowBtn onClick={() => removeTodo(t)} danger title="삭제">
+          삭제
+        </RowBtn>
       ),
     },
   ];
