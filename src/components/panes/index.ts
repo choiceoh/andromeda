@@ -44,3 +44,12 @@ export const PANES: PaneDef[] = [
 ];
 
 export const paneLabel = (key: View): string => PANES.find((p) => p.key === key)?.label ?? key;
+
+// The non-settings pane keys in the user's saved rail order; any registry pane
+// missing from the saved order is appended in registry order (new panes appear,
+// removed ones drop). Settings is excluded — it's pinned to the bottom of the rail.
+export function orderedViews(saved: View[]): View[] {
+  const keys = PANES.filter((p) => p.key !== "settings").map((p) => p.key);
+  const inSaved = saved.filter((v) => keys.includes(v));
+  return [...inSaved, ...keys.filter((k) => !inSaved.includes(k))];
+}

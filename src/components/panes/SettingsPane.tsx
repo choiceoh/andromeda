@@ -8,8 +8,9 @@ import { checkForUpdates } from "@/updater";
 import { errText } from "@/format";
 import { line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import type { View } from "@/types";
 import { LiveDot } from "@/components/LiveDot";
-import { PANES } from "@/components/panes";
+import { PANES, orderedViews } from "@/components/panes";
 
 // 설정 — a full-screen settings section (not a modal). Promotes the gateway
 // connection form out of the sidebar popover and adds log-level + about. Edits the
@@ -32,7 +33,7 @@ const fieldLabel = {
 } as const;
 
 export function SettingsPane() {
-  const { connected, cfg, setCfg, hiddenViews, toggleViewHidden } = useWorkspace();
+  const { connected, cfg, setCfg, hiddenViews, toggleViewHidden, viewOrder, setViewOrder } = useWorkspace();
   const { status, check } = useGatewayStatus(cfg);
   const [level, setLevel] = useState<LogLevel>(getLogLevel());
   const [updateMsg, setUpdateMsg] = useState("");
@@ -59,6 +60,17 @@ export function SettingsPane() {
   }
 
   const isError = status.startsWith("오류");
+
+  // Reorderable rail list (non-settings panes); ▲▼ swap a pane with its neighbour.
+  const railOrder = orderedViews(viewOrder);
+  function moveView(key: View, dir: -1 | 1) {
+    const i = railOrder.indexOf(key);
+    const j = i + dir;
+    if (j < 0 || j >= railOrder.length) return;
+    const next = [...railOrder];
+    [next[i], next[j]] = [next[j], next[i]];
+    setViewOrder(next);
+  }
 
   return (
     <div style={{ maxWidth: 480 }}>
@@ -131,25 +143,50 @@ export function SettingsPane() {
         </div>
       </Section>
 
-      <Section title="좌측 탭" desc="좌측 레일에 표시할 화면을 고르세요. 설정은 항상 표시됩니다.">
+      <Section title="좌측 탭" desc="표시할 화면과 순서를 정하세요. 설정은 항상 맨 아래에 표시됩니다.">
         <div style={{ display: "grid", gap: 1 }}>
-          {PANES.filter((p) => p.key !== "settings").map((p) => (
-            <label
-              key={p.key}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                padding: "6px 4px",
-                fontSize: 13,
-                color: "var(--ink-2)",
-                cursor: "pointer",
-              }}
-            >
-              <input type="checkbox" checked={!hiddenViews.includes(p.key)} onChange={() => toggleViewHidden(p.key)} />
-              {p.label}
-            </label>
-          ))}
+          {railOrder.map((key, idx) => {
+            const p = PANES.find((x) => x.key === key);
+            if (!p) return null;
+            return (
+              <div
+                key={key}
+                style={{ display: "flex", alignItems: "center", gap: 9, padding: "3px 4px", fontSize: 13 }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    flex: 1,
+                    cursor: "pointer",
+                    color: "var(--ink-2)",
+                  }}
+                >
+                  <input type="checkbox" checked={!hiddenViews.includes(key)} onChange={() => toggleViewHidden(key)} />
+                  {p.label}
+                </label>
+                <button
+                  className="row-btn"
+                  onClick={() => moveView(key, -1)}
+                  disabled={idx === 0}
+                  title="위로"
+                  aria-label={`${p.label} 위로`}
+                >
+                  ↑
+                </button>
+                <button
+                  className="row-btn"
+                  onClick={() => moveView(key, 1)}
+                  disabled={idx === railOrder.length - 1}
+                  title="아래로"
+                  aria-label={`${p.label} 아래로`}
+                >
+                  ↓
+                </button>
+              </div>
+            );
+          })}
         </div>
       </Section>
 

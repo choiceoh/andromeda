@@ -45,6 +45,10 @@ interface WorkspaceCtx {
   // (settings is never hideable — it's the way back). Persisted to localStorage.
   hiddenViews: View[];
   toggleViewHidden: (v: View) => void;
+  // Nav-rail order: non-settings pane keys in the user's chosen order (settings is
+  // pinned last). Persisted. SettingsPane reorders; Sidebar renders in this order.
+  viewOrder: View[];
+  setViewOrder: (order: View[]) => void;
 }
 
 const HIDDEN_VIEWS_KEY = "andromeda.hiddenPanes";
@@ -53,6 +57,13 @@ function readHiddenViews(): View[] {
   const arr = getJSON<unknown[]>(HIDDEN_VIEWS_KEY);
   if (Array.isArray(arr)) return arr.filter((v): v is View => typeof v === "string" && v !== "settings");
   return [];
+}
+
+const VIEW_ORDER_KEY = "andromeda.viewOrder";
+
+function readViewOrder(): View[] {
+  const arr = getJSON<unknown[]>(VIEW_ORDER_KEY);
+  return Array.isArray(arr) ? arr.filter((v): v is View => typeof v === "string") : [];
 }
 
 const Ctx = createContext<WorkspaceCtx | null>(null);
@@ -74,6 +85,7 @@ export function WorkspaceProvider({
   const [wikiTarget, setWikiTarget] = useState<string | null>(null);
   const [paneTarget, setPaneTarget] = useState<PaneTarget | null>(null);
   const [hiddenViews, setHiddenViews] = useState<View[]>(readHiddenViews);
+  const [viewOrder, setViewOrder] = useState<View[]>(readViewOrder);
 
   const toggleViewHidden = (v: View) => {
     if (v === "settings") return; // settings stays — it's the way back to this screen
@@ -100,6 +112,10 @@ export function WorkspaceProvider({
     setJSON(HIDDEN_VIEWS_KEY, hiddenViews);
   }, [hiddenViews]);
 
+  useEffect(() => {
+    setJSON(VIEW_ORDER_KEY, viewOrder);
+  }, [viewOrder]);
+
   return (
     <Ctx.Provider
       value={{
@@ -119,6 +135,8 @@ export function WorkspaceProvider({
         consumeWikiTarget,
         hiddenViews,
         toggleViewHidden,
+        viewOrder,
+        setViewOrder,
       }}
     >
       {children}

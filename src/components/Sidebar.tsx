@@ -5,16 +5,22 @@ import { useWorkspace } from "@/workspaceContext";
 import { Icon } from "./Icon";
 import { LiveDot } from "./LiveDot";
 import { WindowControls } from "./WindowControls";
-import { PANES } from "./panes";
+import { orderedViews, PANES } from "./panes";
 
 // Slim nav rail: registry-driven icon tabs (the active one lifts like a Zen tab)
 // + a connection status dot. The gateway URL/token form is tucked into a popover
 // off the status dot so the rail stays narrow — on the real host it auto-connects
 // from the keychain anyway, so the form is rarely needed.
 export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayConfig) => void }) {
-  const { connected, view, setView, hiddenViews } = useWorkspace();
-  // Rail tabs the user chose to show (settings is never hideable — see SettingsPane).
-  const visiblePanes = PANES.filter((p) => p.key === "settings" || !hiddenViews.includes(p.key));
+  const { connected, view, setView, hiddenViews, viewOrder } = useWorkspace();
+  // Rail tabs in the user's chosen order with hidden ones removed; settings is
+  // pinned last and never hideable (see SettingsPane).
+  const visiblePanes = [
+    ...orderedViews(viewOrder)
+      .filter((k) => !hiddenViews.includes(k))
+      .map((k) => PANES.find((p) => p.key === k)!),
+    PANES.find((p) => p.key === "settings")!,
+  ];
   const { status, check } = useGatewayStatus(cfg);
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
