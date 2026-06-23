@@ -68,12 +68,12 @@ describe("Workstation (connected, fixtures)", () => {
       connected: true,
       dataProvider,
     });
-    // not in the chat tab by default (lands on 오늘)
-    expect(screen.queryByText("안녕하세요? 무슨 대화를 할까요?")).not.toBeInTheDocument();
+    // chat tab is always mounted (its conversation persists) but hidden until selected
+    expect(screen.getByText("안녕하세요? 무슨 대화를 할까요?")).not.toBeVisible();
     const nav = screen.getByRole("navigation");
     await userEvent.click(within(nav).getByRole("button", { name: /채팅/ }));
-    // the center chat column greets (its own non-work conversation)
-    expect(await screen.findByText("안녕하세요? 무슨 대화를 할까요?")).toBeInTheDocument();
+    // selecting the rail tab reveals the center chat column
+    expect(screen.getByText("안녕하세요? 무슨 대화를 할까요?")).toBeVisible();
   });
 
   it("opens a dashboard mail row directly in the mail pane", async () => {
