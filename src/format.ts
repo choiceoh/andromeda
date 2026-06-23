@@ -1,6 +1,6 @@
 // Pure display helpers — turn dynamic gateway payloads into readable strings for
 // both the grids and the AI context projection. No React here.
-import type { CalTimestamp } from "./types";
+import type { CalEvent, CalTimestamp } from "./types";
 
 // Coerce a possibly-structured field (e.g. mail `from`) to a short label. `??`
 // would keep an empty-string `name` and hide a present email — so pick the first
@@ -62,6 +62,82 @@ export function calSpan(start: CalTimestamp | undefined, end: CalTimestamp | und
   }
   const e = calStamp(end);
   return [s.iso ? fmtDate(s.iso) : "", e.iso ? fmtDate(e.iso) : ""].filter(Boolean).join(" ~ ");
+}
+
+// ── Month-grid helpers (the 일정 calendar view) ───────────────────────────────
+
+// Event display name. Gateway sends `summary`; `title` is a legacy alias.
+export function eventTitle(ev: CalEvent): string {
+  return ev.summary ?? ev.title ?? "(제목 없음)";
+}
+
+// Local HH:MM for a timed stamp; "" for all-day or unparseable (chips stay terse).
+export function hhmm(v: CalTimestamp | undefined): string {
+  const s = calStamp(v);
+  if (!s.iso || s.allDay) return "";
+  const d = new Date(s.iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+// Localized "year month" heading, e.g. "2026년 6월" / "June 2026". month0 is 0-based.
+export function monthLabel(year: number, month0: number): string {
+  return new Date(year, month0, 1).toLocaleDateString(undefined, { year: "numeric", month: "long" });
+}
+
+// Canonical local day key ("YYYY-M-D", not zero-padded) for map lookups — never shown.
+export function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+// A Date at local midnight from a calendar stamp. All-day YYYY-MM-DD is parsed
+// component-wise (no UTC shift, matching fmtDay); timed values floor to their local day.
+function dayStart(iso: string, allDay: boolean): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (allDay && m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+// Local day keys an event covers (start..end inclusive), so a multi-day event
+// lands on every cell it spans. All-day end.date is exclusive (Google) → stepped
+// back a day; a missing end is a single day. Capped so a malformed end can't spin.
+export function eventDayKeys(start: CalTimestamp | undefined, end: CalTimestamp | undefined): string[] {
+  const s = calStamp(start);
+  if (!s.iso) return [];
+  const from = dayStart(s.iso, s.allDay);
+  const e = calStamp(end);
+  let to = from;
+  if (e.iso) {
+    to = dayStart(e.iso, e.allDay);
+    if (e.allDay) to = new Date(to.getFullYear(), to.getMonth(), to.getDate() - 1);
+  }
+  if (to.getTime() < from.getTime()) to = from;
+  const keys: string[] = [];
+  const cur = new Date(from);
+  for (let i = 0; i < 62 && cur.getTime() <= to.getTime(); i++) {
+    keys.push(dayKey(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return keys;
+}
+
+// Sunday-first weeks of Date cells covering month0/year, with the leading and
+// trailing days needed to fill whole weeks (4–6 rows). month0 is 0-based.
+export function monthMatrix(year: number, month0: number): Date[][] {
+  const lead = new Date(year, month0, 1).getDay(); // 0 = Sunday
+  const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+  const weeks = Math.ceil((lead + daysInMonth) / 7);
+  const cur = new Date(year, month0, 1 - lead);
+  const out: Date[][] = [];
+  for (let w = 0; w < weeks; w++) {
+    const row: Date[] = [];
+    for (let d = 0; d < 7; d++) {
+      row.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    out.push(row);
+  }
+  return out;
 }
 
 // Best-effort message from a Refine/HttpError (plain object with `message`) or any throwable.
