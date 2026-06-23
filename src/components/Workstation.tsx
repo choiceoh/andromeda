@@ -36,13 +36,18 @@ export function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: G
   return (
     <div
       style={{
+        position: "relative",
         display: "flex",
         gap: "var(--gap)",
         height: "100vh",
-        padding: "var(--gap)",
+        padding: "22px var(--gap) var(--gap)",
         boxSizing: "border-box",
       }}
     >
+      {/* Transparent top-edge drag handle — grab the very top of the frameless
+          window to move it. Lives in the top padding band, clear of the panels
+          and the top-left controls. */}
+      <div className="drag-strip" data-tauri-drag-region />
       <Sidebar cfg={cfg} setCfg={setCfg} />
       <main className="panel" style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "20px 22px" }}>
         <Active />
