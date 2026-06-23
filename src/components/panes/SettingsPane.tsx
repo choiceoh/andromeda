@@ -8,6 +8,7 @@ import { checkForUpdates } from "@/updater";
 import { errText } from "@/format";
 import { line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { LiveDot } from "@/components/LiveDot";
 
 // 설정 — a full-screen settings section (not a modal). Promotes the gateway
 // connection form out of the sidebar popover and adds log-level + about. Edits the
@@ -96,7 +97,7 @@ export function SettingsPane() {
             연결 / 저장
           </button>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--muted)" }}>
-            <span className="live-dot" style={{ background: connected ? "var(--online)" : "var(--faint)" }} />
+            <LiveDot connected={connected} />
             {status || (connected ? "연결됨" : "미연결")}
           </span>
         </div>
