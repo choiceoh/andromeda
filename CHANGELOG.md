@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.15](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.14...andromeda-v0.0.15) (2026-06-23)
+
+
+### Features
+
+* 비업무 채팅 탭 — 중앙 채팅 컬럼 + 우측 세션 목록 (네이티브 챗봇 대응) ([#102](https://github.com/choiceoh/andromeda/issues/102)) ([052bc8e](https://github.com/choiceoh/andromeda/commit/052bc8e1e475afb64d5b4f1e02fa1bb0027ff781))
+
 ## [0.0.14](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.13...andromeda-v0.0.14) (2026-06-23)
 
 
