@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { font } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
-import { Markdown } from "@/components/Markdown";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
 
 // Client-only scratch document. Its text lives in the workspace context so it
 // survives pane switches, and it has no backing resource (AI reads it but there's
@@ -25,27 +24,13 @@ export function DocPane() {
           {preview ? "편집" : "미리보기"}
         </button>
       </div>
-      {preview ? (
-        <div className="md-surface" style={{ height: "70vh", overflow: "auto" }} aria-label="문서 미리보기">
-          <Markdown text={doc} />
-        </div>
-      ) : (
-        <textarea
-          value={doc}
-          onChange={(e) => setDoc(e.target.value)}
-          placeholder="여기에 문서를 작성하세요. 우측 AI가 이 내용을 텍스트로 읽습니다."
-          className="field"
-          style={{
-            width: "100%",
-            height: "70vh",
-            boxSizing: "border-box",
-            resize: "none",
-            fontFamily: font,
-            fontSize: 13,
-            lineHeight: 1.5,
-          }}
-        />
-      )}
+      <MarkdownEditor
+        value={doc}
+        onChange={setDoc}
+        preview={preview}
+        placeholder="여기에 문서를 작성하세요. 우측 AI가 이 내용을 텍스트로 읽습니다."
+        ariaLabel="문서 미리보기"
+      />
     </>
   );
 }

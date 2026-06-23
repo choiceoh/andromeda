@@ -6,6 +6,7 @@ import { clearCachedResource } from "./cachedList";
 import { type ChatToolEvent, type GatewayConfig, chatStream, ping } from "./gateway";
 import { type ProactiveEvent, subscribeEvents } from "./events";
 import { relatedResourcesForResource, relatedResourcesForTools } from "./resourceRefresh";
+import { appendTextPart, chatTurnId, upsertToolPart } from "./chatParts";
 
 // An assistant reply is an ordered list of text segments and tool chips, so a
 // tool call rendered mid-reply keeps its place in the prose (text → tool → text).
@@ -50,12 +51,6 @@ export interface ChatState {
   regenerate: () => void;
   clear: () => void;
   setTurns: (turns: ChatTurn[]) => void;
-}
-
-function chatTurnId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random()}`;
 }
 
 // Drives one Deneb chat/stream turn: streams delta into text parts, tool frames
@@ -117,32 +112,10 @@ export function useChat(cfg: GatewayConfig): ChatState {
     const patch = (update: (turn: ChatTurn) => ChatTurn) => {
       setTurns((prev) => prev.map((turn) => (turn.id === assistantId ? update(turn) : turn)));
     };
-    // Append streamed text to the trailing text part, or open a new one after a tool.
-    const appendText = (t: string) =>
-      patch((turn) => {
-        const parts = [...(turn.parts ?? [])];
-        const last = parts.at(-1);
-        if (last?.kind === "text") parts[parts.length - 1] = { kind: "text", text: last.text + t };
-        else parts.push({ kind: "text", text: t });
-        return { ...turn, parts, text: turn.text + t };
-      });
-    // Insert a tool chip on `started`; flip it to its result on `completed` (same id).
-    const upsertTool = (ev: ChatToolEvent) =>
-      patch((turn) => {
-        const parts = [...(turn.parts ?? [])];
-        const idx = ev.toolUseId ? parts.findIndex((p) => p.kind === "tool" && p.id === ev.toolUseId) : -1;
-        const next: ToolPart = {
-          kind: "tool",
-          id: ev.toolUseId || `${ev.tool}-${parts.length}`,
-          tool: ev.tool,
-          state: ev.state || "started",
-          detail: ev.detail,
-          isError: ev.isError,
-        };
-        if (idx >= 0) parts[idx] = { ...(parts[idx] as ToolPart), ...next };
-        else parts.push(next);
-        return { ...turn, parts };
-      });
+    // Append streamed text / upsert a tool chip on the in-flight assistant turn —
+    // pure reducers (chatParts) threaded through patch().
+    const appendText = (t: string) => patch((turn) => appendTextPart(turn, t));
+    const upsertTool = (ev: ChatToolEvent) => patch((turn) => upsertToolPart(turn, ev));
 
     try {
       await chatStream(
