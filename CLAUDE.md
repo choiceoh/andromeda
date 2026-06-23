@@ -53,23 +53,23 @@ Gateway (Deneb)  ──miniapp.* RPC──▶  gateway.ts (callRpc)
 
 ### File responsibilities (`src/`)
 
-| File                   | Role                                                                                                                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `gateway.ts`           | Raw gateway client: `callRpc`, `ping`, `chatStream`, token/config storage. The only place that talks HTTP to the gateway (plus `events.ts`).                             |
-| `events.ts`            | Proactive push SSE client (`subscribeEvents`).                                                                                                                           |
-| `sse.ts`               | Shared SSE frame reader (`readSSE`) used by both `chatStream` and `events.ts`.                                                                                           |
-| `aiText.ts`            | `serializeList` — the counted-header + one-line-per-row projection list panes push to the AI.                                                                            |
-| `dataProvider.ts`      | Refine `DataProvider` — generic CRUD→RPC glue, **derived from `resources.ts`**.                                                                                          |
-| `resources.ts`         | **Single source of truth** for resource↔RPC mapping + Refine resource metadata. Query-driven RPCs (memory/search) live here as constants, not CRUD.                      |
-| `authProvider.ts`      | Token-based Refine auth provider (DESIGN §4).                                                                                                                            |
-| `workspaceContext.tsx` | Shared workstation state + the mechanism where the active pane publishes its serialized content to the AI panel (`useRegisterPane`). Holds `cfg` for query-driven panes. |
-| `hooks.ts`             | `useChat`, `useEvents`, `useGatewayStatus`.                                                                                                                              |
-| `log.ts`               | Namespaced, leveled logger (see Logging).                                                                                                                                |
-| `format.ts`            | Pure display helpers (`text`, `fmtDate`, `calSpan`, `errText`). No React.                                                                                                |
-| `theme.ts`             | Design tokens + shared style objects. **No hardcoded colors in components.**                                                                                             |
-| `types.ts`             | Domain row types + the `View` union (pane keys).                                                                                                                         |
-| `components/`          | `Workstation` (3-col shell), `Sidebar` (nav + connect), `AIPanel`, `ProactivePanel`, `Grid` (+`GridNotice`), `ErrorBoundary`.                                            |
-| `components/panes/`    | One file per pane + `index.ts` = the **pane registry** (`PANES`).                                                                                                        |
+| File                   | Role                                                                                                                                                                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gateway.ts`           | Raw gateway client: `callRpc`, `ping`, `chatStream`, token/config storage. The only place that talks HTTP to the gateway (plus `events.ts`).                                                                                                   |
+| `events.ts`            | Proactive push SSE client (`subscribeEvents`).                                                                                                                                                                                                 |
+| `sse.ts`               | Shared SSE frame reader (`readSSE`) used by both `chatStream` and `events.ts`.                                                                                                                                                                 |
+| `aiText.ts`            | `serializeList` — the counted-header + one-line-per-row projection list panes push to the AI.                                                                                                                                                  |
+| `dataProvider.ts`      | Refine `DataProvider` — generic CRUD→RPC glue, **derived from `resources.ts`**.                                                                                                                                                                |
+| `resources.ts`         | **Single source of truth** for resource↔RPC mapping + Refine resource metadata. Query-driven RPCs (memory/search) live here as constants, not CRUD.                                                                                            |
+| `authProvider.ts`      | Token-based Refine auth provider (DESIGN §4).                                                                                                                                                                                                  |
+| `workspaceContext.tsx` | Shared workstation state + the mechanism where the active pane publishes its serialized content to the AI panel (`useRegisterPane`). Holds `cfg` for query-driven panes. Also the cross-pane `openWiki(path)` channel (인물·검색 → 위키 pane). |
+| `hooks.ts`             | `useChat`, `useEvents`, `useGatewayStatus`.                                                                                                                                                                                                    |
+| `log.ts`               | Namespaced, leveled logger (see Logging).                                                                                                                                                                                                      |
+| `format.ts`            | Pure display helpers (`text`, `fmtDate`, `calSpan`, `errText`). No React.                                                                                                                                                                      |
+| `theme.ts`             | Design tokens + shared style objects. **No hardcoded colors in components.**                                                                                                                                                                   |
+| `types.ts`             | Domain row types + the `View` union (pane keys).                                                                                                                                                                                               |
+| `components/`          | `Workstation` (3-col shell), `Sidebar` (nav + connect), `AIPanel`, `ProactivePanel`, `Grid` (+`GridNotice`, `RowBtn`, `StopClick`; `onRowClick` opens detail), `Modal` (+`Field`, `Detail` — detail/edit overlays), `ErrorBoundary`.           |
+| `components/panes/`    | One file per pane + `index.ts` = the **pane registry** (`PANES`).                                                                                                                                                                              |
 
 ## Recipe: add a resource-backed grid pane
 
@@ -94,6 +94,23 @@ For search-like panes (input → RPC → results), don't use the data provider. 
 `SearchPane.tsx`: pull `cfg` from `useWorkspace()`, call `callRpc(cfg, "<rpc>", params)`
 directly, manage local state, and `useRegisterPane(undefined, aiText)`. Add the RPC
 name to `resources.ts` as a constant. See `WikiPane.tsx` for read+edit+save.
+
+## Recipe: add a detail/edit modal to a pane
+
+The center "선택 항목 상세" (DESIGN §4) is a floating `Modal`, not a route. To make
+grid rows open one:
+
+1. Pass `onRowClick={(row) => setSel(row)}` to `<Grid>`; hold the selected row in
+   pane state (`null` = closed). Wrap any in-row action buttons in `<StopClick>` so
+   their clicks don't also open the modal.
+2. Render `{sel && <DetailModal …/>}` as a sibling. Build the modal from
+   `components/Modal` primitives: `<Modal title footer>`, `<Field label>` for edit
+   inputs, `<Detail label value>` for read-only rows.
+3. **Edit/create** → drive writes through Refine (`useCreate`/`useUpdate`) so the
+   resource's existing RPC wiring applies; close on `onSuccess`. See `CalendarPane`
+   (create + edit + read-only Google detail) and `TodoPane` (due/note edit).
+4. **Read-only detail** → just lay out `<Detail>` rows. See `PeoplePane` (인물 카드,
+   jumps to 위키 via `openWiki`) and `CronsPane` (payload + error fields).
 
 ## Conventions
 
@@ -147,6 +164,22 @@ sidebar status / `[andromeda:rpc]` logs.
 - **pnpm supply-chain wrapper:** this pnpm distribution (locally _and_ in CI) gates
   build scripts and fails `install` until each is approved in `pnpm-workspace.yaml`
   (`allowBuilds:`). esbuild is already approved there. Add new ones the same way.
+
+## Releasing (release-please)
+
+Releases are automated from Conventional Commits — no manual version bumping.
+
+- Land work on `main` with `feat:` / `fix:` / `chore:` … commits (squash-merge keeps the
+  PR title as the commit, so write the PR title in that form).
+- `release-please` (in `.github/workflows/release.yml`) keeps a single open **release
+  PR** that bumps the version + writes `CHANGELOG.md`. **Merging that PR** is what cuts a
+  release: it tags `vX.Y.Z`, creates the GitHub Release, then the same workflow builds &
+  signs the Win/macOS bundles + `latest.json` and uploads them (auto-updater endpoint).
+- Version lives in three files kept in lockstep by release-please via
+  `release-please-config.json` (`package.json`, `src-tauri/tauri.conf.json`,
+  `src-tauri/Cargo.toml`). Don't hand-edit versions. `pnpm bump <v>` remains only as a
+  manual fallback.
+- Pre-1.0 bumping: `feat`/`fix` → patch (`0.0.x`), `!`/`BREAKING CHANGE` → minor (`0.x.0`).
 
 ## Roadmap (DESIGN §8)
 

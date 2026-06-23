@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useList, useOne } from "@refinedev/core";
 import type { Mail } from "@/types";
 import { serializeList } from "@/aiText";
+import { useCachedList, useCachedOne } from "@/cachedList";
 import { MAIL_RPC } from "@/resources";
 import { color, ellipsis } from "@/theme";
 import { fmtDate, text } from "@/format";
@@ -11,15 +11,11 @@ import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 
 export function MailPane() {
   const { connected } = useWorkspace();
-  const { result, query } = useList<Mail>({ resource: "mail", queryOptions: { enabled: connected } });
+  const { result, query } = useCachedList<Mail>("mail", connected);
   const mails = result?.data ?? [];
   const [selectedId, setSelectedId] = useState<string | number | undefined>();
   const selectedPreview = mails.find((m) => String(m.id) === String(selectedId));
-  const detail = useOne<Mail>({
-    resource: "mail",
-    id: selectedId,
-    queryOptions: { enabled: connected && selectedId !== undefined },
-  });
+  const detail = useCachedOne<Mail>("mail", selectedId, connected && selectedId !== undefined);
   const selectedMail = detail.result ?? selectedPreview;
   const { run, error, busy } = useAction(() => void query.refetch());
 
@@ -89,20 +85,16 @@ export function MailPane() {
       <h2 style={{ marginTop: 2 }}>메일</h2>
       {error && <p className="pane-error">오류: {error}</p>}
       <GridNotice query={query} count={mails.length} empty="메일이 없습니다.">
-        <div className="mail-split">
-          <div className="mail-list">
-            <Grid
-              columns={columns}
-              rows={mails}
-              getKey={(m) => String(m.id)}
-              rowStyle={(m) => ({ fontWeight: m.isUnread ? 600 : 400 })}
-              onRowClick={(m) => setSelectedId(m.id)}
-              isRowSelected={(m) => String(m.id) === String(selectedId)}
-              rowTitle={(m) => `${m.subject ?? "(제목 없음)"} 읽기`}
-            />
-          </div>
-          <MailDetail mail={selectedMail} query={detail.query} />
-        </div>
+        <Grid
+          columns={columns}
+          rows={mails}
+          getKey={(m) => String(m.id)}
+          rowStyle={(m) => ({ fontWeight: m.isUnread ? 600 : 400 })}
+          onRowClick={(m) => setSelectedId((current) => (String(current) === String(m.id) ? undefined : m.id))}
+          isRowSelected={(m) => String(m.id) === String(selectedId)}
+          rowTitle={(m) => `${m.subject ?? "(제목 없음)"} 읽기`}
+          renderExpandedRow={() => <MailDetail mail={selectedMail} query={detail.query} />}
+        />
       </GridNotice>
     </>
   );
@@ -143,20 +135,14 @@ function MailDetail({
   mail?: Mail;
   query: { isLoading: boolean; isError?: boolean; error?: unknown };
 }) {
-  if (!mail) {
-    return (
-      <aside className="mail-detail" aria-label="메일 상세">
-        <div className="mail-detail-empty">선택된 메일 없음</div>
-      </aside>
-    );
-  }
+  if (!mail) return null;
 
   const body = mailBody(mail);
   const who = text(mail.from);
   const to = text(mail.to);
 
   return (
-    <aside className="mail-detail" aria-label="메일 상세">
+    <section className="mail-detail" aria-label="메일 상세">
       {query.isLoading && <div className="mail-detail-status">본문 불러오는 중…</div>}
       {query.isError && <div className="mail-detail-status error">본문 불러오기 실패</div>}
       <div className="mail-detail-head">
@@ -177,6 +163,6 @@ function MailDetail({
         )}
       </div>
       <pre className="mail-body">{body || "본문 없음"}</pre>
-    </aside>
+    </section>
   );
 }

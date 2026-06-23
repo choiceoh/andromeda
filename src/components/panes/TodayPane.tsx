@@ -1,5 +1,5 @@
-import { useList } from "@refinedev/core";
 import type { CalEvent, Mail, Todo, View, WorkItem } from "@/types";
+import { useCachedList } from "@/cachedList";
 import { calSpan, fmtDate, text } from "@/format";
 import { Icon } from "@/components/Icon";
 import { GridNotice } from "@/components/Grid";
@@ -31,10 +31,10 @@ function sectionText(b: Brief): string {
 
 export function TodayPane() {
   const { connected, setView } = useWorkspace();
-  const cal = useList<CalEvent>({ resource: "calendar", queryOptions: { enabled: connected } });
-  const mail = useList<Mail>({ resource: "mail", queryOptions: { enabled: connected } });
-  const todo = useList<Todo>({ resource: "todo", queryOptions: { enabled: connected } });
-  const work = useList<WorkItem>({ resource: "workfeed", queryOptions: { enabled: connected } });
+  const cal = useCachedList<CalEvent>("calendar", connected);
+  const mail = useCachedList<Mail>("mail", connected);
+  const todo = useCachedList<Todo>("todo", connected);
+  const work = useCachedList<WorkItem>("workfeed", connected);
 
   const events = cal.result?.data ?? [];
   // Recent mail, unread first — robust if `isUnread` is absent (order is just preserved).

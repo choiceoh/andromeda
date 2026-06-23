@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
 import { TodayPane } from "./TodayPane";
+import { cachedListStorageKey } from "@/cachedList";
 import { fakeProvider, renderWithProviders } from "@/test/util";
+
+afterEach(() => {
+  localStorage.clear();
+});
 
 describe("TodayPane (오늘 대시보드)", () => {
   it("aggregates each resource into a section card", async () => {
@@ -29,6 +34,34 @@ describe("TodayPane (오늘 대시보드)", () => {
     renderWithProviders(<TodayPane />, { connected: true, dataProvider: fakeProvider({ todo: many }) });
     // 9 open todos, capped at 6 → an "외 3건" overflow note.
     expect(await screen.findByText(/외 3건/)).toBeInTheDocument();
+  });
+
+  it("renders cached todo and workfeed sections while the gateway refresh is still pending", () => {
+    localStorage.setItem(
+      cachedListStorageKey("todo"),
+      JSON.stringify({
+        data: [{ id: "cached-todo", title: "캐시된 할일", done: false }],
+        total: 1,
+        savedAt: Date.now() - 120_000,
+      }),
+    );
+    localStorage.setItem(
+      cachedListStorageKey("workfeed"),
+      JSON.stringify({
+        data: [{ id: "cached-work", title: "캐시된 작업피드", source: "cache" }],
+        total: 1,
+        savedAt: Date.now() - 120_000,
+      }),
+    );
+    const dataProvider = {
+      ...fakeProvider(),
+      getList: async () => new Promise<never>(() => {}),
+    };
+
+    renderWithProviders(<TodayPane />, { connected: true, dataProvider });
+
+    expect(screen.getByText(/캐시된 할일/)).toBeInTheDocument();
+    expect(screen.getByText(/캐시된 작업피드/)).toBeInTheDocument();
   });
 
   it("shows a single connect notice when disconnected", () => {

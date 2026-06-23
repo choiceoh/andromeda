@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 // Used by the nav rail and chrome. Inherits color from the parent; size via prop.
 export type IconName =
   | "today"
+  | "progress"
   | "todo"
   | "doc"
   | "mail"
@@ -16,7 +17,10 @@ export type IconName =
   | "send"
   | "bell"
   | "arrow-right"
-  | "close";
+  | "close"
+  | "win-min"
+  | "win-max"
+  | "settings";
 
 const PATHS: Record<IconName, ReactNode> = {
   today: (
@@ -75,6 +79,12 @@ const PATHS: Record<IconName, ReactNode> = {
     </>
   ),
   workfeed: <path d="M3 12h3.5l2.2 6 4-13 2.4 9 1.8-2h4" />,
+  progress: (
+    <>
+      <path d="M3.5 20.5h17" />
+      <path d="M6.5 20.5V14M12 20.5V8M17.5 20.5V4.5" />
+    </>
+  ),
   send: <path d="M12 19V6M6.5 11.5L12 5.8l5.5 5.7" />,
   bell: (
     <>
@@ -84,6 +94,17 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   "arrow-right": <path d="M5 12h13M13 6.5l5.5 5.5-5.5 5.5" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  "win-min": <path d="M6 12h12" />,
+  "win-max": <rect x="5.5" y="5.5" width="13" height="13" rx="2.5" />,
+  // Sliders/controls glyph — distinct from the `today` sun, reads as "settings".
+  settings: (
+    <>
+      <path d="M4 7h10M18 7h2M4 12h2M10 12h10M4 17h6M14 17h6" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="8" cy="12" r="2" />
+      <circle cx="12" cy="17" r="2" />
+    </>
+  ),
 };
 
 export function Icon({

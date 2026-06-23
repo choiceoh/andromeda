@@ -4,6 +4,7 @@
 // all follow automatically.
 import type { ComponentType } from "react";
 import type { View } from "@/types";
+import { ProgressPane } from "./ProgressPane";
 import { TodoPane } from "./TodoPane";
 import { DocPane } from "./DocPane";
 import { MailPane } from "./MailPane";
@@ -14,6 +15,7 @@ import { PeoplePane } from "./PeoplePane";
 import { CronsPane } from "./CronsPane";
 import { WorkfeedPane } from "./WorkfeedPane";
 import { TodayPane } from "./TodayPane";
+import { SettingsPane } from "./SettingsPane";
 
 export interface PaneDef {
   key: View;
@@ -24,6 +26,8 @@ export interface PaneDef {
 
 export const PANES: PaneDef[] = [
   { key: "today", label: "오늘", shortcut: "0", Component: TodayPane },
+  // Digits 0–9 are taken; this dashboard-style overview gets a letter shortcut (⌘P).
+  { key: "progress", label: "진행", shortcut: "p", Component: ProgressPane },
   { key: "todo", label: "할일", shortcut: "1", Component: TodoPane },
   { key: "doc", label: "문서", shortcut: "2", Component: DocPane },
   { key: "mail", label: "메일", shortcut: "3", Component: MailPane },
@@ -33,6 +37,8 @@ export const PANES: PaneDef[] = [
   { key: "people", label: "연락처", shortcut: "7", Component: PeoplePane },
   { key: "crons", label: "크론", shortcut: "8", Component: CronsPane },
   { key: "workfeed", label: "작업피드", shortcut: "9", Component: WorkfeedPane },
+  // App settings live at the bottom of the rail; ⌘, mirrors the OS settings shortcut.
+  { key: "settings", label: "설정", shortcut: ",", Component: SettingsPane },
 ];
 
 export const paneLabel = (key: View): string => PANES.find((p) => p.key === key)?.label ?? key;

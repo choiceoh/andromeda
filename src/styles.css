@@ -75,6 +75,7 @@ body {
   font-size: 14px;
   color: var(--ink);
   background: var(--grad) fixed;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-feature-settings:
@@ -107,27 +108,40 @@ textarea {
   font-family: inherit;
 }
 
-/* scrollbars — thin, quiet */
+/* scrollbars — invisible at rest, a quiet warm-taupe thumb that fades in only
+ * while you're over the scrolling area, so they never clash with the warm-Zen
+ * surfaces. (The window itself never scrolls — body has overflow:hidden — only
+ * the panes do.) Warm neutral, not the clay accent: the accent stays singular. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cfd2d8 transparent;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgba(149, 137, 125, 0.5) transparent;
 }
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-*::-webkit-scrollbar-thumb {
-  background: #d4d7dd;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: #bdc0c8;
-  background-clip: content-box;
+  width: 9px;
+  height: 9px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(149, 137, 125, 0.5);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(118, 106, 95, 0.75);
+  background-clip: content-box;
 }
 
 ::selection {
@@ -147,6 +161,42 @@ textarea {
   background: var(--panel);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-panel);
+}
+
+/* frameless window — no titlebar band at all. The min/max/close cluster tucks
+ * into the very top of the nav rail; the rail itself is the drag handle (see
+ * data-tauri-drag-region in Sidebar), so the work + AI panels rise to the
+ * window's top edge and nothing reads as a title bar. */
+.win-ctls {
+  display: flex;
+  gap: 1px;
+  margin-bottom: 6px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.win-ctl {
+  width: 28px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted-2);
+  border-radius: 6px;
+  cursor: default;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.win-ctl:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ink-2);
+}
+.win-ctl.close:hover {
+  background: var(--due-soft);
+  color: var(--due);
 }
 
 /* nav rail item — the lifting Zen tab */
@@ -402,6 +452,13 @@ textarea {
 .dgrid tbody tr.selected:hover {
   background: var(--accent-soft);
 }
+.dgrid tbody tr.dgrid-expanded-row,
+.dgrid tbody tr.dgrid-expanded-row:hover {
+  background: var(--panel-sunken);
+}
+.dgrid tbody tr.dgrid-expanded-row > td {
+  padding: 0 10px 14px;
+}
 
 /* compact row-action button (mail/cron/workfeed actions) */
 .row-btn {
@@ -443,21 +500,31 @@ textarea {
   cursor: default;
 }
 
-/* mail reader split view */
-.mail-split {
-  display: grid;
-  grid-template-columns: minmax(380px, 1fr) minmax(280px, 38%);
-  gap: 22px;
-  align-items: start;
+/* clickable unified-search result (jumps to the wiki/diary/person page) */
+.search-hit {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 8px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--ink);
+  transition: background 0.12s ease;
 }
-.mail-list {
-  min-width: 0;
-  overflow: auto;
+.search-hit:hover {
+  background: var(--panel-sunken);
 }
+
+/* mail reader inline expansion */
 .mail-detail {
   min-width: 0;
-  border-left: 1px solid var(--line);
-  padding-left: 20px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: var(--panel);
 }
 .mail-detail-empty,
 .mail-detail-status {
@@ -641,15 +708,45 @@ textarea {
   animation: fadeUp 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-@media (max-width: 1040px) {
-  .mail-split {
-    grid-template-columns: 1fr;
+/* floating overlay — detail views & edit forms (Modal.tsx) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 64px 24px 24px;
+  background: rgba(31, 33, 40, 0.28);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.15s ease both;
+}
+.modal-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 96px);
+  animation: modalIn 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.modal-panel > div {
+  /* the scrollable body region grows but never pushes header/footer off-screen */
+  min-height: 0;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-  .mail-detail {
-    border-left: none;
-    border-top: 1px solid var(--line);
-    padding-left: 0;
-    padding-top: 16px;
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
