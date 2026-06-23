@@ -106,7 +106,7 @@ export function SettingsPane() {
         {isError && <p style={{ fontSize: 12, color: "var(--due)", margin: "2px 0 0" }}>{status}</p>}
       </Section>
 
-      <Section title="로그 레벨" desc="개발자 도구 콘솔에 찍히는 로그 상세도. 즉시 적용되고 이 기기에 저장됩니다.">
+      <Section title="로그 레벨" desc="">
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {LOG_LEVELS.map((l) => {
             const active = l === level;
@@ -142,9 +142,6 @@ export function SettingsPane() {
           </button>
           {updateMsg && <span style={{ fontSize: 12, ...muted }}>{updateMsg}</span>}
         </div>
-        <p style={{ fontSize: 12, ...muted, margin: "12px 0 0", lineHeight: 1.5 }}>
-          설정은 이 기기에 저장됩니다 (localStorage). 자동 업데이트는 데스크톱 앱에서만 동작합니다.
-        </p>
       </Section>
     </div>
   );

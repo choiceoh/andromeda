@@ -105,7 +105,7 @@ export function GridNotice({
 }) {
   const { connected } = useWorkspace();
   const notice: CSSProperties = { ...muted, fontSize: 13 };
-  if (!connected) return <p style={notice}>게이트웨이에 연결하면 표시됩니다 (좌측 하단).</p>;
+  if (!connected) return <p style={notice}>미연결</p>;
   if (query.isError) return <p style={{ fontSize: 13, color: color.danger }}>불러오기 실패: {errText(query.error)}</p>;
   if (query.isLoading) return <p style={notice}>불러오는 중…</p>;
   if (count === 0) return <p style={notice}>{empty}</p>;

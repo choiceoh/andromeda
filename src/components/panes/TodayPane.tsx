@@ -119,11 +119,8 @@ export function TodayPane() {
       <h2 style={{ marginTop: 2 }}>
         오늘 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--muted-2)", letterSpacing: 0 }}>{today}</span>
       </h2>
-      <p style={{ color: "var(--muted-2)", fontSize: 12, margin: "6px 0 20px", lineHeight: 1.5 }}>
-        우측 데네브에게 “오늘 뭐부터?”라고 물어보세요 — 아래 컨텍스트로 우선순위를 제안합니다.
-      </p>
       {!connected ? (
-        <p style={{ color: "var(--muted-2)", fontSize: 13 }}>게이트웨이에 연결하면 표시됩니다 (좌측 하단).</p>
+        <p style={{ color: "var(--muted-2)", fontSize: 13 }}>미연결</p>
       ) : (
         <div
           style={{

@@ -36,7 +36,7 @@ describe("App (disconnected)", () => {
     for (const label of ["할일", "문서", "메일", "일정"]) {
       expect(screen.getByRole("button", { name: new RegExp(label) })).toBeInTheDocument();
     }
-    expect(screen.getByText(/게이트웨이에 연결하면/)).toBeInTheDocument();
+    expect(screen.getByText(/미연결/)).toBeInTheDocument();
   });
 });
 
