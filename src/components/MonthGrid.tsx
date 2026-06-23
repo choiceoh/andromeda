@@ -5,7 +5,7 @@ import { dayKey, eventDayKeys, monthLabel, monthMatrix } from "@/format";
 import { Icon } from "@/components/Icon";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
-const MAX_MARKERS = 4;
+const MAX_MARKERS = 3;
 
 // Category → marker tint (semantic, via theme tokens). Most upcoming events are the
 // user's own, so an absent category styles as "mine".
@@ -39,7 +39,7 @@ export function MonthGrid({
   const weeks = monthMatrix(year, month0);
 
   return (
-    <div style={{ maxWidth: 780 }}>
+    <div style={{ width: "100%" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <button className="cal-nav-btn" onClick={onPrev} aria-label="이전 달" title="이전 달">
           <span style={{ display: "inline-flex", transform: "rotate(180deg)" }}>

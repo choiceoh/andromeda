@@ -18,7 +18,7 @@ import {
 } from "@/format";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
-import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
+import { GridNotice, RowBtn } from "@/components/Grid";
 import { MonthGrid } from "@/components/MonthGrid";
 import { Detail, Field, Modal } from "@/components/Modal";
 import { Markdown } from "@/components/Markdown";
@@ -121,37 +121,11 @@ export function CalendarPane() {
   });
   useRegisterPane("calendar-range", aiText);
 
-  const columns: Column<CalEvent>[] = [
-    {
-      header: "시간",
-      width: 230,
-      tdStyle: { fontSize: 13, opacity: 0.8, whiteSpace: "nowrap" },
-      cell: (ev) => calSpan(ev.start, ev.end) || "—",
-    },
-    { header: "일정", cell: (ev) => eventTitle(ev) },
-    { header: "장소", width: 150, tdStyle: { fontSize: 13, opacity: 0.7 }, cell: (ev) => ev.location ?? "" },
-    {
-      header: "",
-      width: 60,
-      tdStyle: { textAlign: "right" },
-      // Only locally-created events are deletable; Google-sourced events are read-only.
-      // RowBtn stops click propagation itself, so it won't also open the row's modal.
-      cell: (ev) =>
-        ev.local ? (
-          <RowBtn
-            onClick={() => {
-              if (selectedEventId === String(ev.id)) setSelectedEventId(null);
-              run("miniapp.calendar.delete", { id: ev.id });
-            }}
-            disabled={busy}
-            danger
-            title="삭제"
-          >
-            삭제
-          </RowBtn>
-        ) : null,
-    },
-  ];
+  // Category → agenda dot tint, mirroring the month-grid markers.
+  const agendaDotClass = (ev: CalEvent): string => {
+    const c = ev.category === "deadline" ? "deadline" : ev.category === "others" ? "others" : "mine";
+    return `cal-agenda-dot ${c}`;
+  };
 
   // Step the visible month, normalizing year rollover via the Date constructor.
   // Clear any day selection — the picked day isn't in the new month's view.
@@ -190,57 +164,102 @@ export function CalendarPane() {
       </div>
       {error && <p className="pane-error">오류: {error}</p>}
 
-      {connected && (
-        <div style={{ marginTop: 14 }}>
-          <MonthGrid
-            year={cursor.y}
-            month0={cursor.m}
-            eventsByDay={eventsByDay}
-            todayKey={todayKey}
-            selectedKey={selectedDay}
-            onSelectDay={(k) => {
-              setSelectedEventId(null);
-              setSelectedDay((p) => (p === k ? null : k));
-            }}
-            onPrev={() => step(-1)}
-            onNext={() => step(1)}
-            onToday={() => {
-              setSelectedDay(null);
-              setSelectedEventId(null);
-              const t = new Date();
-              setCursor({ y: t.getFullYear(), m: t.getMonth() });
-            }}
-          />
-        </div>
-      )}
-
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "22px 0 10px" }}>
-        <h3 style={{ margin: 0, color: "var(--muted)" }}>{listLabel}</h3>
-        {selectedDay && (
-          <button
-            className="row-btn"
-            onClick={() => {
-              setSelectedEventId(null);
-              setSelectedDay(null);
-            }}
-          >
-            ← 월 전체
-          </button>
+      <div className="cal-layout">
+        {connected && (
+          <div className="cal-cal">
+            <MonthGrid
+              year={cursor.y}
+              month0={cursor.m}
+              eventsByDay={eventsByDay}
+              todayKey={todayKey}
+              selectedKey={selectedDay}
+              onSelectDay={(k) => {
+                setSelectedEventId(null);
+                setSelectedDay((p) => (p === k ? null : k));
+              }}
+              onPrev={() => step(-1)}
+              onNext={() => step(1)}
+              onToday={() => {
+                setSelectedDay(null);
+                setSelectedEventId(null);
+                const t = new Date();
+                setCursor({ y: t.getFullYear(), m: t.getMonth() });
+              }}
+            />
+          </div>
         )}
+
+        <div className="cal-agenda-col">
+          {connected && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+              <h3 style={{ margin: 0, color: "var(--muted)" }}>{listLabel}</h3>
+              {selectedDay && (
+                <button
+                  className="row-btn"
+                  onClick={() => {
+                    setSelectedEventId(null);
+                    setSelectedDay(null);
+                  }}
+                >
+                  ← 월 전체
+                </button>
+              )}
+            </div>
+          )}
+          <GridNotice
+            query={query}
+            count={listEvents.length}
+            empty={selectedDay ? "이 날 일정이 없습니다." : "이 달 일정이 없습니다."}
+          >
+            <div className="cal-agenda">
+              {listEvents.map((ev) => {
+                const id = String(ev.id);
+                const sel = selectedEventId === id;
+                const span = calSpan(ev.start, ev.end) || "—";
+                const toggle = () => setSelectedEventId((p) => (p === id ? null : id));
+                return (
+                  <div
+                    key={id}
+                    className={"cal-agenda-item" + (sel ? " selected" : "")}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={sel}
+                    onClick={toggle}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggle();
+                      }
+                    }}
+                  >
+                    <span className={agendaDotClass(ev)} />
+                    <div className="cal-agenda-body">
+                      <div className="cal-agenda-title">{eventTitle(ev)}</div>
+                      <div className="cal-agenda-meta">
+                        {span}
+                        {ev.location ? ` · ${ev.location}` : ""}
+                      </div>
+                    </div>
+                    {ev.local && (
+                      <RowBtn
+                        onClick={() => {
+                          if (selectedEventId === id) setSelectedEventId(null);
+                          run("miniapp.calendar.delete", { id: ev.id });
+                        }}
+                        disabled={busy}
+                        danger
+                        title="삭제"
+                      >
+                        삭제
+                      </RowBtn>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </GridNotice>
+        </div>
       </div>
-      <GridNotice
-        query={query}
-        count={listEvents.length}
-        empty={selectedDay ? "이 날 일정이 없습니다." : "이 달 일정이 없습니다."}
-      >
-        <Grid
-          columns={columns}
-          rows={listEvents}
-          getKey={(ev) => String(ev.id)}
-          onRowClick={(ev) => setSelectedEventId((id) => (id === String(ev.id) ? null : String(ev.id)))}
-          isRowSelected={(ev) => selectedEventId === String(ev.id)}
-        />
-      </GridNotice>
 
       {selectedEvent && (
         <SelectedEventWorkspace

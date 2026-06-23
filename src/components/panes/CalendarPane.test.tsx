@@ -95,11 +95,11 @@ describe("CalendarPane (일정 달력)", () => {
       connected: true,
       dataProvider: fakeProvider({ "calendar-range": mixed }),
     });
-    const table = await screen.findByRole("table");
-    expect(within(table).getByText("앞으로 회의")).toBeInTheDocument();
-    // June 10 ended before the frozen "now" (June 15) → dropped from the list,
+    // The agenda (right) lists upcoming events; the grid (left) only shows dots.
+    expect(await screen.findByText("앞으로 회의")).toBeInTheDocument();
+    // June 10 ended before the frozen "now" (June 15) → dropped from the agenda,
     // while the grid still marks that day as having an event.
-    expect(within(table).queryByText("지난 회의")).not.toBeInTheDocument();
+    expect(screen.queryByText("지난 회의")).not.toBeInTheDocument();
   });
 
   it("shows a connect notice and no calendar when disconnected", () => {
@@ -137,19 +137,22 @@ describe("CalendarPane (일정 달력)", () => {
       connected: true,
       dataProvider: fakeProvider({ "calendar-range": events }),
     });
-    expect(await screen.findByText(/2026.*일정/)).toBeInTheDocument();
+    // Wait for events to load so the June 18 cell exposes its "일정 1건" count.
+    expect(await screen.findByText("기획 리뷰")).toBeInTheDocument();
+    expect(screen.getByText(/2026.*일정/)).toBeInTheDocument();
 
-    // Click June 18 (holds 기획 리뷰) → the list filters to that day.
-    await userEvent.click(screen.getByRole("button", { name: /6월 18일/ }));
+    // Click June 18 → the agenda filters to that day. The grid cell's comma form
+    // ("6월 18일, 일정 1건") stays distinct from the agenda row's time-meta
+    // ("6월 18일 오후…"), avoiding an ambiguous match.
+    await userEvent.click(screen.getByRole("button", { name: /6월 18일, 일정/ }));
     expect(screen.getByText("6월 18일 일정")).toBeInTheDocument();
-    const table = screen.getByRole("table");
-    expect(within(table).getByText("기획 리뷰")).toBeInTheDocument();
-    expect(within(table).queryByText("연차")).not.toBeInTheDocument(); // 연차 is June 22, filtered out
+    expect(screen.getByText("기획 리뷰")).toBeInTheDocument();
+    expect(screen.queryByText("연차")).not.toBeInTheDocument(); // 연차 is June 22, filtered out
 
-    // Clear → back to the full visible-month list.
+    // Clear → back to the full visible-month agenda.
     await userEvent.click(screen.getByRole("button", { name: /← 월 전체/ }));
     expect(screen.getByText(/2026.*일정/)).toBeInTheDocument();
-    expect(within(screen.getByRole("table")).getByText("연차")).toBeInTheDocument();
+    expect(screen.getByText("연차")).toBeInTheDocument();
   });
 
   it("shows an empty notice when a day with no events is clicked", async () => {
