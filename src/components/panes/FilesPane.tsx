@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { clearCachedResource } from "@/cachedList";
 import { FILES_RPC } from "@/resources";
+import { readCachedRpc, rpcCacheKey, writeCachedRpc } from "@/rpcCache";
 import type { FileEntry } from "@/types";
 import { useRpc } from "@/useRpc";
 import { color, ellipsis, muted } from "@/theme";
@@ -11,8 +13,9 @@ import { Field, Modal } from "@/components/Modal";
 export function FilesPane() {
   const { connected, cfg } = useWorkspace();
   const { call, status, setStatus, busy } = useRpc(cfg);
-  const [path, setPath] = useState("");
-  const [entries, setEntries] = useState<FileEntry[]>([]);
+  const rootSnapshot = readCachedRpc<FilesListResponse>(FILES_RESOURCE, filesListCacheKey(""));
+  const [path, setPath] = useState(rootSnapshot?.data.path ?? "");
+  const [entries, setEntries] = useState<FileEntry[]>(rootSnapshot?.data.entries ?? []);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchContent, setSearchContent] = useState(false);
@@ -25,7 +28,7 @@ export function FilesPane() {
   const uploadRef = useRef<HTMLInputElement>(null);
 
   useRegisterPane(
-    undefined,
+    FILES_RESOURCE,
     entries.length
       ? `[파일 ${searching ? "검색" : path || "/"}]\n${entries
           .map((e) => `- ${isFolder(e) ? "[폴더] " : ""}${entryPath(e)}${e.size ? ` (${formatBytes(e.size)})` : ""}`)
@@ -40,17 +43,13 @@ export function FilesPane() {
   }, [connected, cfg.url, cfg.token]);
 
   async function list(nextPath = path) {
-    const r = await call<{ entries?: FileEntry[]; path?: string }>(
-      FILES_RPC.list,
-      { path: nextPath, limit: 300 },
-      "불러오는 중...",
-    );
+    const key = filesListCacheKey(nextPath);
+    const snapshot = readCachedRpc<FilesListResponse>(FILES_RESOURCE, key);
+    if (snapshot) applyList(snapshot.data, nextPath);
+    const r = await call<FilesListResponse>(FILES_RPC.list, { path: nextPath, limit: 300 }, "불러오는 중...");
     if (!r.ok) return;
-    setPath(r.data?.path ?? nextPath);
-    setEntries(r.data?.entries ?? []);
-    setSearching(false);
-    setSelected(null);
-    setShareUrl("");
+    applyList(r.data, nextPath);
+    writeCachedRpc(FILES_RESOURCE, key, r.data);
     setStatus("");
   }
 
@@ -60,17 +59,31 @@ export function FilesPane() {
       await list(path);
       return;
     }
-    const r = await call<{ entries?: FileEntry[] }>(
-      FILES_RPC.search,
-      { query: q, content: searchContent, semantic: searchSemantic, max: 80 },
-      "검색 중...",
-    );
+    const params = { query: q, content: searchContent, semantic: searchSemantic, max: 80 };
+    const key = rpcCacheKey(FILES_RPC.search, params);
+    const snapshot = readCachedRpc<FilesSearchResponse>(FILES_RESOURCE, key);
+    if (snapshot) applySearch(snapshot.data.entries ?? []);
+    const r = await call<FilesSearchResponse>(FILES_RPC.search, params, "검색 중...");
     if (!r.ok) return;
-    setEntries(r.data?.entries ?? []);
+    const results = r.data?.entries ?? [];
+    applySearch(results);
+    writeCachedRpc(FILES_RESOURCE, key, { entries: results });
+    setStatus((r.data?.entries ?? []).length ? "" : "검색 결과 없음");
+  }
+
+  function applyList(data: FilesListResponse, fallbackPath: string) {
+    setPath(data?.path ?? fallbackPath);
+    setEntries(data?.entries ?? []);
+    setSearching(false);
+    setSelected(null);
+    setShareUrl("");
+  }
+
+  function applySearch(list: FileEntry[]) {
+    setEntries(list);
     setSearching(true);
     setSelected(null);
     setShareUrl("");
-    setStatus((r.data?.entries ?? []).length ? "" : "검색 결과 없음");
   }
 
   async function share(entry: FileEntry) {
@@ -88,6 +101,7 @@ export function FilesPane() {
     const r = await call(FILES_RPC.mkdir, { path: joinPath(path, trimmed) }, "폴더 생성 중...");
     if (!r.ok) return;
     setMakingFolder(false);
+    clearCachedResource(FILES_RESOURCE);
     await list(path);
     setStatus("폴더 생성됨");
   }
@@ -98,6 +112,7 @@ export function FilesPane() {
     const r = await call(FILES_RPC.move, { src: entryPath(entry), dst: target }, "이동 중...");
     if (!r.ok) return;
     setMoving(null);
+    clearCachedResource(FILES_RESOURCE);
     await list(path);
     setStatus("이동됨");
   }
@@ -107,6 +122,7 @@ export function FilesPane() {
     if (!r.ok) return;
     setDeleting(null);
     setSelected(null);
+    clearCachedResource(FILES_RESOURCE);
     await list(path);
     setStatus("삭제됨");
   }
@@ -119,6 +135,7 @@ export function FilesPane() {
       "업로드 중...",
     );
     if (!r.ok) return;
+    clearCachedResource(FILES_RESOURCE);
     await list(path);
     setStatus("업로드됨");
   }
@@ -289,6 +306,21 @@ export function FilesPane() {
       )}
     </>
   );
+}
+
+const FILES_RESOURCE = "files";
+
+interface FilesListResponse {
+  entries?: FileEntry[];
+  path?: string;
+}
+
+interface FilesSearchResponse {
+  entries?: FileEntry[];
+}
+
+function filesListCacheKey(path: string): string {
+  return rpcCacheKey(FILES_RPC.list, { path, limit: 300 });
 }
 
 function entryPath(entry: FileEntry): string {

@@ -1,6 +1,10 @@
 const RESOURCE_TOOL_PATTERNS: Array<[RegExp, string[]]> = [
   [/gmail|mail/, ["mail"]],
   [/calendar|event/, ["calendar", "calendar-range"]],
+  [/memory|wiki|diary|topicdocs/, ["wiki", "search", "notebook"]],
+  [/files?/, ["files"]],
+  [/notebook/, ["notebook"]],
+  [/search/, ["search"]],
   [/todo|task/, ["todo"]],
   [/workfeed/, ["workfeed"]],
   [/project|digest/, ["progress"]],
@@ -13,6 +17,8 @@ export function relatedResourcesForResource(resource: string | undefined): strin
     case "calendar":
     case "calendar-range":
       return ["calendar", "calendar-range"];
+    case "wiki":
+      return ["wiki", "search", "notebook"];
     default:
       return resource ? [resource] : [];
   }

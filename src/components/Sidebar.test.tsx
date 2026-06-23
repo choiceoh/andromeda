@@ -8,7 +8,7 @@ describe("Sidebar nav rail", () => {
 
   it("hides panes listed in andromeda.hiddenPanes but always keeps 설정", () => {
     localStorage.setItem("andromeda.hiddenPanes", JSON.stringify(["mail", "wiki"]));
-    renderWithProviders(<Sidebar cfg={{ url: "", token: "" }} setCfg={() => {}} />);
+    renderWithProviders(<Sidebar />);
     const nav = screen.getByRole("navigation");
 
     // hidden panes drop out of the rail

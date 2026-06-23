@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { type BaseKey, type BaseRecord, useList, useOne } from "@refinedev/core";
 
+import { clearCachedRpcResource } from "./rpcCache";
 import { getJSON, setJSON } from "./storage";
 
 export const CACHED_LIST_STALE_MS = 60_000;
@@ -28,6 +29,7 @@ export function cachedOneStorageKey(resource: string, id: BaseKey): string {
 }
 
 export function clearCachedResource(resource: string): void {
+  clearCachedRpcResource(resource);
   try {
     const listExact = cachedListStorageKey(resource);
     const listPrefix = `${listExact}.`;

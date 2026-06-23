@@ -7,6 +7,7 @@ import { SearchPane } from "./SearchPane";
 // search.all is query-driven (callRpc → fetch); stub it with the gateway's
 // fanned-out { wiki, diary, people } shape.
 beforeEach(() => {
+  localStorage.clear();
   if (!globalThis.crypto?.randomUUID) vi.stubGlobal("crypto", { randomUUID: () => "test-uuid" });
   vi.stubGlobal(
     "fetch",
@@ -26,7 +27,10 @@ beforeEach(() => {
     ),
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  localStorage.clear();
+  vi.unstubAllGlobals();
+});
 
 describe("SearchPane", () => {
   it("centers the box until a search, then rises and shows clickable hits", async () => {

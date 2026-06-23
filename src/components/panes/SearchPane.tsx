@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SEARCH_RPC } from "@/resources";
+import { readCachedRpc, rpcCacheKey, writeCachedRpc } from "@/rpcCache";
 import type { SearchHit } from "@/types";
 import { useRpc } from "@/useRpc";
 import { line } from "@/theme";
@@ -41,18 +42,26 @@ export function SearchPane() {
         .map((h) => `- ${h.type ? `[${h.type}] ` : ""}${h.title ?? ""}${h.snippet ? ` — ${h.snippet}` : ""}`)
         .join("\n")
     : "";
-  useRegisterPane(undefined, aiText);
+  useRegisterPane(SEARCH_RESOURCE, aiText);
 
   async function run() {
     const query = q.trim();
     if (!query || !connected) return;
     setSearched(true);
-    const r = await call<SearchAllResult | SearchHit[]>(SEARCH_RPC, { query }, "검색 중…");
+    const key = searchCacheKey(query);
+    const snapshot = readCachedRpc<SearchCacheResponse>(SEARCH_RESOURCE, key);
+    if (snapshot) applySearch(snapshot.data);
+    const r = await call<SearchCacheResponse>(SEARCH_RPC, { query }, "검색 중…");
     if (!r.ok) {
       setHits([]);
       return;
     }
-    const list = flatten(r.data);
+    applySearch(r.data);
+    writeCachedRpc(SEARCH_RESOURCE, key, r.data);
+  }
+
+  function applySearch(data: SearchCacheResponse) {
+    const list = flatten(data);
     setHits(list);
     setStatus(list.length ? "" : "결과 없음");
   }
@@ -115,4 +124,12 @@ export function SearchPane() {
       )}
     </div>
   );
+}
+
+const SEARCH_RESOURCE = "search";
+
+type SearchCacheResponse = SearchAllResult | SearchHit[];
+
+function searchCacheKey(query: string): string {
+  return rpcCacheKey(SEARCH_RPC, { query });
 }
