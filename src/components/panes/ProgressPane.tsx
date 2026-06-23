@@ -1,6 +1,6 @@
-import { useList } from "@refinedev/core";
 import type { ProjectDigest } from "@/types";
 import { serializeList } from "@/aiText";
+import { useCachedList } from "@/cachedList";
 import { fmtDate } from "@/format";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { GridNotice } from "@/components/Grid";
@@ -11,10 +11,7 @@ import { GridNotice } from "@/components/Grid";
 // briefing to Deneb so "어느 프로젝트부터 챙길까?" can be answered in context.
 export function ProgressPane() {
   const { connected } = useWorkspace();
-  const { result, query } = useList<ProjectDigest>({
-    resource: "progress",
-    queryOptions: { enabled: connected },
-  });
+  const { result, query } = useCachedList<ProjectDigest>("progress", connected);
   const digests = result?.data ?? [];
 
   // Counted header + one block per project (headline, indented bullets, due) — the

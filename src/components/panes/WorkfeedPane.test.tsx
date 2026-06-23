@@ -23,7 +23,10 @@ beforeEach(() => {
     }),
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  localStorage.clear();
+  vi.unstubAllGlobals();
+});
 
 describe("WorkfeedPane", () => {
   it("answers a question item via workfeed.answer", async () => {

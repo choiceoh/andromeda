@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useList } from "@refinedev/core";
 import type { Person } from "@/types";
 import { serializeList } from "@/aiText";
+import { useCachedList } from "@/cachedList";
 import { fmtDate } from "@/format";
 import { ellipsis } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
@@ -12,7 +12,7 @@ import { Detail, Modal } from "@/components/Modal";
 // pages — so a row may have a messageCount, a wikiSummary, or both.
 export function PeoplePane() {
   const { connected } = useWorkspace();
-  const { result, query } = useList<Person>({ resource: "people", queryOptions: { enabled: connected } });
+  const { result, query } = useCachedList<Person>("people", connected);
   const people = result?.data ?? [];
   const [selected, setSelected] = useState<Person | null>(null);
 
