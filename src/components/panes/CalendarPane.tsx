@@ -32,6 +32,8 @@ export function CalendarPane() {
   const now = new Date();
   const todayKey = dayKey(now);
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  // A clicked day in the grid (dayKey) — filters the list below to that date. null = upcoming.
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   // Place each event on every day it spans, so the month grid can look a day up.
   const eventsByDay = useMemo(() => {
@@ -77,11 +79,20 @@ export function CalendarPane() {
   ];
 
   // Step the visible month, normalizing year rollover via the Date constructor.
-  const step = (delta: number) =>
+  // Clear any day selection — the picked day isn't in the new month's view.
+  const step = (delta: number) => {
+    setSelectedDay(null);
     setCursor((c) => {
       const d = new Date(c.y, c.m + delta, 1);
       return { y: d.getFullYear(), m: d.getMonth() };
     });
+  };
+
+  // The list below shows the selected day's events, or all upcoming events.
+  const listEvents = selectedDay ? (eventsByDay.get(selectedDay) ?? []) : events;
+  const listLabel = selectedDay
+    ? `${selectedDay.split("-")[1]}월 ${selectedDay.split("-")[2]}일 일정`
+    : "다가오는 일정";
 
   return (
     <>
@@ -100,9 +111,12 @@ export function CalendarPane() {
             month0={cursor.m}
             eventsByDay={eventsByDay}
             todayKey={todayKey}
+            selectedKey={selectedDay}
+            onSelectDay={(k) => setSelectedDay((p) => (p === k ? null : k))}
             onPrev={() => step(-1)}
             onNext={() => step(1)}
             onToday={() => {
+              setSelectedDay(null);
               const t = new Date();
               setCursor({ y: t.getFullYear(), m: t.getMonth() });
             }}
@@ -110,11 +124,22 @@ export function CalendarPane() {
         </div>
       )}
 
-      <h3 style={{ margin: "22px 0 10px", color: "var(--muted)" }}>다가오는 일정</h3>
-      <GridNotice query={query} count={events.length} empty="다가오는 일정이 없습니다.">
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "22px 0 10px" }}>
+        <h3 style={{ margin: 0, color: "var(--muted)" }}>{listLabel}</h3>
+        {selectedDay && (
+          <button className="row-btn" onClick={() => setSelectedDay(null)}>
+            ← 다가오는 일정
+          </button>
+        )}
+      </div>
+      <GridNotice
+        query={query}
+        count={listEvents.length}
+        empty={selectedDay ? "이 날 일정이 없습니다." : "다가오는 일정이 없습니다."}
+      >
         <Grid
           columns={columns}
-          rows={events}
+          rows={listEvents}
           getKey={(ev) => String(ev.id)}
           maxWidth={780}
           onRowClick={(ev) => setEdit({ ev })}

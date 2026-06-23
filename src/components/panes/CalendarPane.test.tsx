@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { DataProvider } from "@refinedev/core";
 import { CalendarPane } from "./CalendarPane";
@@ -77,6 +77,29 @@ describe("CalendarPane (일정 달력)", () => {
     expect(v.location).toBe("회의실 B");
     expect(v.allDay).toBe(false);
     expect(String(v.start)).toContain("2026-07-01");
+  });
+
+  it("filters the list to a clicked day and clears back to upcoming", async () => {
+    renderWithProviders(<CalendarPane />, { connected: true, dataProvider: fakeProvider({ calendar: events }) });
+    expect(await screen.findByText("다가오는 일정")).toBeInTheDocument();
+
+    // Click June 18 (holds 기획 리뷰) → the list filters to that day.
+    await userEvent.click(screen.getByRole("button", { name: /6월 18일/ }));
+    expect(screen.getByText("6월 18일 일정")).toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("기획 리뷰")).toBeInTheDocument();
+    expect(within(table).queryByText("연차")).not.toBeInTheDocument(); // 연차 is June 22, filtered out
+
+    // Clear → back to the full upcoming list.
+    await userEvent.click(screen.getByRole("button", { name: /← 다가오는 일정/ }));
+    expect(screen.getByText("다가오는 일정")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("연차")).toBeInTheDocument();
+  });
+
+  it("shows an empty notice when a day with no events is clicked", async () => {
+    renderWithProviders(<CalendarPane />, { connected: true, dataProvider: fakeProvider({ calendar: events }) });
+    await userEvent.click(await screen.findByRole("button", { name: /6월 5일/ }));
+    expect(screen.getByText("이 날 일정이 없습니다.")).toBeInTheDocument();
   });
 
   it("opens a read-only detail for Google (non-local) events", async () => {
