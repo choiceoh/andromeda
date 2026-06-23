@@ -12,12 +12,12 @@ import { type ChatTurn, useChat } from "@/hooks";
 import { errText } from "@/format";
 import { useWorkspace } from "@/workspaceContext";
 import { Icon } from "./Icon";
+import { LiveDot } from "./LiveDot";
 import { Markdown } from "./Markdown";
 import { ModelPicker } from "./ModelPicker";
 import { ProactivePanel } from "./ProactivePanel";
 import { SessionDrawer } from "./SessionDrawer";
 import { ToolChip } from "./ToolChip";
-import { paneLabel } from "./panes";
 
 const MAIN_SESSION = "client:main";
 
@@ -47,7 +47,7 @@ function AssistantBody({ turn }: { turn: ChatTurn }) {
 // chips; a model picker drives the per-turn model and a history drawer switches
 // conversations. Tool calls that mutate data refresh the active grid (useChat).
 export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
-  const { view, aiText, activeResource, connected } = useWorkspace();
+  const { aiText, activeResource, connected } = useWorkspace();
   const { thinking, busy, turns, send, stop, regenerate, clear, setTurns } = useChat(cfg);
   const [input, setInput] = useState("");
   const [models, setModels] = useState<ModelsList | null>(null);
@@ -64,8 +64,6 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
     const el = transcriptRef.current;
     if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
   }, [turns, thinking]);
-
-  const currentPane = paneLabel(view);
 
   // Load the model registry + recent sessions once connected; both are
   // best-effort (an older gateway or the offline test path just leaves them empty).
@@ -91,12 +89,6 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, cfg.url, cfg.token]);
-
-  const quickActions = [
-    { label: "우선순위", prompt: `현재 ${currentPane} 화면을 보고, 지금 먼저 처리할 순서와 이유를 짧게 정리해줘.` },
-    { label: "요약", prompt: `현재 ${currentPane} 화면의 핵심만 한눈에 보이게 요약해줘.` },
-    { label: "후속 조치", prompt: `현재 ${currentPane} 화면에서 내가 바로 실행할 후속 조치를 뽑아줘.` },
-  ];
 
   function submit(message = input) {
     const msg = message.trim();
@@ -178,10 +170,7 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
         >
           <Icon name="history" size={15} />
         </button>
-        <span
-          className={"live-dot" + (connected ? " pulse" : "")}
-          style={{ background: connected ? "var(--online)" : "var(--faint)" }}
-        />
+        <LiveDot connected={connected} pulse />
       </div>
 
       {sessionsOpen && (
@@ -198,23 +187,6 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
 
       <ProactivePanel cfg={cfg} />
 
-      <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 9, lineHeight: 1.5 }}>
-        현재 뷰({currentPane})를 읽는 중 · 도구로 바꾸면 즉시 반영됩니다
-      </div>
-
-      <div className="ai-quick-actions" aria-label="빠른 지시">
-        {quickActions.map((action) => (
-          <button
-            key={action.label}
-            className="quick-action"
-            onClick={() => submit(action.prompt)}
-            disabled={busy || !connected}
-          >
-            {action.label}
-          </button>
-        ))}
-      </div>
-
       <div
         className="ai-transcript"
         role="log"
@@ -227,9 +199,9 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
         }}
       >
         {turns.length === 0 ? (
-          <div className="ai-empty">
-            {connected ? "메시지를 보내면 대화가 여기에 쌓입니다." : "게이트웨이 연결 대기 중"}
-          </div>
+          connected ? null : (
+            <div className="ai-empty">게이트웨이 연결 대기 중</div>
+          )
         ) : (
           turns.map((turn) => (
             <div key={turn.id} className={`ai-turn ${turn.role} ${turn.status}`}>

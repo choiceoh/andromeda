@@ -36,7 +36,7 @@ describe("App (disconnected)", () => {
     for (const label of ["할일", "문서", "메일", "일정"]) {
       expect(screen.getByRole("button", { name: new RegExp(label) })).toBeInTheDocument();
     }
-    expect(screen.getByText(/게이트웨이에 연결하면/)).toBeInTheDocument();
+    expect(screen.getByText(/미연결/)).toBeInTheDocument();
   });
 });
 
@@ -111,34 +111,6 @@ describe("Workstation (connected, fixtures)", () => {
     expect(screen.getByText(/첫 줄/)).toBeInTheDocument();
     expect(screen.getByText(/둘째 줄/)).toBeInTheDocument();
     expect(await screen.findByText("완료")).toBeInTheDocument();
-  });
-
-  it("sends current-view quick actions into the chat history", async () => {
-    const user = userEvent.setup();
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes("/api/v1/miniapp/chat/stream")) {
-        return sseResponse(
-          'event: delta\ndata: {"delta":"요약했습니다"}\n\nevent: done\ndata: {"text":"요약했습니다"}\n\n',
-        );
-      }
-      return sseResponse();
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    renderWithProviders(<AIPanel cfg={{ url: "http://test", token: "tok" }} />, {
-      connected: true,
-    });
-
-    await user.click(screen.getByRole("button", { name: "요약" }));
-
-    await waitFor(() =>
-      expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("/api/v1/miniapp/chat/stream"))).toHaveLength(
-        1,
-      ),
-    );
-    expect(screen.getByText(/현재 오늘 화면의 핵심만/)).toBeInTheDocument();
-    expect(await screen.findByText("요약했습니다")).toBeInTheDocument();
   });
 
   it("renders the assistant reply as Markdown and tool calls as chips", async () => {

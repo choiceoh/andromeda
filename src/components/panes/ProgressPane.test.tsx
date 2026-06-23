@@ -66,6 +66,6 @@ describe("ProgressPane (프로젝트 진행상황)", () => {
 
   it("shows a connect notice when disconnected", () => {
     renderWithProviders(<ProgressPane />, { connected: false });
-    expect(screen.getByText(/게이트웨이에 연결하면/)).toBeInTheDocument();
+    expect(screen.getByText(/미연결/)).toBeInTheDocument();
   });
 });

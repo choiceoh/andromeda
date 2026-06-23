@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { saveConfig } from "@/gateway";
+import { setString } from "@/storage";
 import { useGatewayStatus } from "@/hooks";
 import { type LogLevel, getLogLevel, setLogLevel } from "@/log";
 import { isTauri } from "@/tauri";
@@ -7,6 +8,7 @@ import { checkForUpdates } from "@/updater";
 import { errText } from "@/format";
 import { line, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { LiveDot } from "@/components/LiveDot";
 
 // 설정 — a full-screen settings section (not a modal). Promotes the gateway
 // connection form out of the sidebar popover and adds log-level + about. Edits the
@@ -42,11 +44,7 @@ export function SettingsPane() {
   function applyLevel(next: LogLevel) {
     setLevel(next);
     setLogLevel(next);
-    try {
-      localStorage.setItem("andromeda.logLevel", next);
-    } catch {
-      /* localStorage unavailable */
-    }
+    setString("andromeda.logLevel", next);
   }
 
   async function runUpdateCheck() {
@@ -99,14 +97,14 @@ export function SettingsPane() {
             연결 / 저장
           </button>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--muted)" }}>
-            <span className="live-dot" style={{ background: connected ? "var(--online)" : "var(--faint)" }} />
+            <LiveDot connected={connected} />
             {status || (connected ? "연결됨" : "미연결")}
           </span>
         </div>
         {isError && <p style={{ fontSize: 12, color: "var(--due)", margin: "2px 0 0" }}>{status}</p>}
       </Section>
 
-      <Section title="로그 레벨" desc="개발자 도구 콘솔에 찍히는 로그 상세도. 즉시 적용되고 이 기기에 저장됩니다.">
+      <Section title="로그 레벨" desc="">
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {LOG_LEVELS.map((l) => {
             const active = l === level;
@@ -142,9 +140,6 @@ export function SettingsPane() {
           </button>
           {updateMsg && <span style={{ fontSize: 12, ...muted }}>{updateMsg}</span>}
         </div>
-        <p style={{ fontSize: 12, ...muted, margin: "12px 0 0", lineHeight: 1.5 }}>
-          설정은 이 기기에 저장됩니다 (localStorage). 자동 업데이트는 데스크톱 앱에서만 동작합니다.
-        </p>
       </Section>
     </div>
   );

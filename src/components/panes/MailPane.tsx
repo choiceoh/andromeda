@@ -8,7 +8,7 @@ import { fmtDate, text } from "@/format";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
-import { Markdown } from "@/components/Markdown";
+import { MailDetail, mailBody } from "./MailDetail";
 
 export function MailPane() {
   const { connected, consumePaneTarget, paneTarget } = useWorkspace();
@@ -42,6 +42,16 @@ export function MailPane() {
     : "";
   const aiText = [listText, detailText].filter(Boolean).join("\n\n");
   useRegisterPane("mail", aiText);
+
+  // Detail actions. Archive/trash drop the now-gone selection so the row collapses.
+  const act = (method: string) => {
+    if (selectedId !== undefined) void run(method, { id: selectedId });
+  };
+  const closeAfter = (method: string) => {
+    if (selectedId === undefined) return;
+    void run(method, { id: selectedId });
+    setSelectedId(undefined);
+  };
 
   const columns: Column<Mail>[] = [
     {
@@ -100,84 +110,18 @@ export function MailPane() {
           onRowClick={(m) => setSelectedId((current) => (String(current) === String(m.id) ? undefined : m.id))}
           isRowSelected={(m) => String(m.id) === String(selectedId)}
           rowTitle={(m) => `${m.subject ?? "(제목 없음)"} 읽기`}
-          renderExpandedRow={() => <MailDetail mail={selectedMail} query={detail.query} />}
+          renderExpandedRow={() => (
+            <MailDetail
+              mail={selectedMail}
+              query={detail.query}
+              busy={busy}
+              onMarkRead={() => act(MAIL_RPC.markRead)}
+              onArchive={() => closeAfter(MAIL_RPC.archive)}
+              onTrash={() => closeAfter(MAIL_RPC.trash)}
+            />
+          )}
         />
       </GridNotice>
     </>
-  );
-}
-
-function mailBody(mail?: Mail): string {
-  if (!mail) return "";
-  const body = firstString(mail, ["body", "plain", "plainText", "bodyText", "text", "message", "content"]);
-  if (body) return body;
-  if (mail.snippet) return mail.snippet;
-  const html = firstString(mail, ["html"]);
-  return html ? htmlToText(html) : "";
-}
-
-function firstString(mail: Mail, keys: string[]): string {
-  const record = mail as unknown as Record<string, unknown>;
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) return value;
-  }
-  return "";
-}
-
-function htmlToText(html: string): string {
-  if (typeof DOMParser !== "undefined") {
-    return new DOMParser().parseFromString(html, "text/html").body.textContent?.trim() ?? "";
-  }
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function MailDetail({
-  mail,
-  query,
-}: {
-  mail?: Mail;
-  query: { isLoading: boolean; isError?: boolean; error?: unknown };
-}) {
-  if (!mail) return null;
-
-  const body = mailBody(mail);
-  const who = text(mail.from);
-  const to = text(mail.to);
-
-  return (
-    <section className="mail-detail" aria-label="메일 상세">
-      {query.isLoading && <div className="mail-detail-status">본문 불러오는 중…</div>}
-      {query.isError && <div className="mail-detail-status error">본문 불러오기 실패</div>}
-      <div className="mail-detail-head">
-        <div className="mail-detail-subject">{mail.subject ?? "(제목 없음)"}</div>
-        <div className="mail-detail-meta">
-          {who || "—"}
-          {to ? ` → ${to}` : ""}
-          {mail.date ? ` · ${fmtDate(mail.date)}` : ""}
-        </div>
-        {mail.labels && mail.labels.length > 0 && (
-          <div className="mail-labels">
-            {mail.labels.map((label) => (
-              <span key={label} className="mail-label">
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      {body ? (
-        // The gateway returns the body HTML-converted to Markdown, so render it
-        // as Markdown — links become clickable, lists/quotes keep structure.
-        <div className="mail-body">
-          <Markdown text={body} />
-        </div>
-      ) : (
-        <div className="mail-body mail-detail-empty">본문 없음</div>
-      )}
-    </section>
   );
 }

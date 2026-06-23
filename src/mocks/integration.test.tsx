@@ -44,6 +44,22 @@ describe("App against the mock gateway (real stack)", () => {
     expect(within(detail).getByText(/회의 전까지 초안 자료를 공유/)).toBeInTheDocument();
   });
 
+  it("shows the AI analysis and sender-context cards in the mail detail", async () => {
+    render(<App />);
+    await userEvent.click(within(screen.getByRole("navigation")).getByRole("button", { name: /메일/ }));
+    await userEvent.click(await screen.findByText("분기 리뷰 일정 확정"));
+    const detail = screen.getByLabelText("메일 상세");
+
+    // AI analysis card: cached analysis (Markdown) + importance badge + project chip.
+    expect(await within(detail).findByText(/분기 리뷰 일정 확정 요청/)).toBeInTheDocument();
+    expect(within(detail).getByText("중요")).toBeInTheDocument();
+    expect(within(detail).getByText("Andromeda 설계 노트")).toBeInTheDocument();
+
+    // Sender-context card: recent volume + curated wiki chip.
+    expect(await within(detail).findByText(/최근 30일 12건/)).toBeInTheDocument();
+    expect(within(detail).getByText("발신자")).toBeInTheDocument();
+  });
+
   it("populates the AI model picker from miniapp.models.list", async () => {
     render(<App />);
     const picker = await screen.findByRole("combobox", { name: "모델 선택" });
