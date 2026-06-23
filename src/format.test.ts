@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calSpan, calStamp, errText, fmtDate, text } from "./format";
+import { calSpan, calStamp, dayKey, errText, eventDayKeys, fmtDate, monthMatrix, text } from "./format";
 
 describe("text", () => {
   it("returns strings as-is", () => {
@@ -52,6 +52,34 @@ describe("calSpan", () => {
   it("renders timed events as a range", () => {
     const span = calSpan("2026-06-17T10:00:00Z", "2026-06-17T11:00:00Z");
     expect(span).toContain("~");
+  });
+});
+
+describe("monthMatrix", () => {
+  it("returns Sunday-first weeks that cover the whole month", () => {
+    const weeks = monthMatrix(2026, 5); // June 2026
+    const flat = weeks.flat();
+    expect(weeks[0]).toHaveLength(7);
+    expect(flat[0].getDay()).toBe(0); // first cell is a Sunday
+    expect(flat[flat.length - 1].getDay()).toBe(6); // last cell is a Saturday
+    // every day of June is present
+    const keys = new Set(flat.map(dayKey));
+    for (let d = 1; d <= 30; d++) expect(keys.has(`2026-6-${d}`)).toBe(true);
+  });
+});
+
+describe("eventDayKeys", () => {
+  it("is a single day for a timed event without an end", () => {
+    expect(eventDayKeys("2026-06-18T05:00:00", undefined)).toEqual(["2026-6-18"]);
+  });
+  it("spans all-day events, stepping back the exclusive end.date", () => {
+    expect(eventDayKeys({ date: "2026-06-22" }, { date: "2026-06-24" })).toEqual(["2026-6-22", "2026-6-23"]);
+  });
+  it("is one day for a single all-day event (end is exclusive)", () => {
+    expect(eventDayKeys({ date: "2026-06-22" }, { date: "2026-06-23" })).toEqual(["2026-6-22"]);
+  });
+  it("is empty when the start is missing", () => {
+    expect(eventDayKeys(undefined, undefined)).toEqual([]);
   });
 });
 

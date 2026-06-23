@@ -37,6 +37,7 @@
   /* semantic */
   --online: #6b9b80;
   --due: #a85038;
+  --due-soft: rgba(168, 80, 56, 0.12);
 
   /* shape */
   --radius-panel: 14px;
@@ -499,6 +500,104 @@ textarea {
   border-bottom: 1px solid var(--line);
   padding-bottom: 7px;
   margin-bottom: 8px;
+}
+
+/* month calendar (일정 pane) — flat grid lines drawn by per-cell borders */
+.cal-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--muted);
+  border-radius: var(--radius-ctl);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.cal-nav-btn:hover {
+  background: #f5f5f7;
+  color: var(--ink);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  overflow: hidden;
+  background: var(--panel);
+}
+.cal-dow {
+  padding: 7px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-2);
+  background: var(--panel-sunken);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.cal-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 96px;
+  padding: 5px 6px 7px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+.cal-cell.out {
+  background: var(--panel-sunken);
+}
+.cal-daynum {
+  align-self: flex-start;
+  min-width: 19px;
+  height: 19px;
+  line-height: 19px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--ink-2);
+}
+.cal-cell.out .cal-daynum {
+  color: var(--faint);
+}
+.cal-today .cal-daynum {
+  padding: 0 6px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+}
+.cal-chip {
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-chip.mine {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+.cal-chip.deadline {
+  background: var(--due-soft);
+  color: var(--due);
+}
+.cal-chip.others {
+  background: var(--panel-sunken);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.cal-more {
+  padding-left: 2px;
+  font-size: 11px;
+  color: var(--muted-2);
 }
 
 /* micro label (tracked uppercase, for latin labels like DENEB AI) */
