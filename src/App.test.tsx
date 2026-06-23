@@ -47,7 +47,7 @@ describe("Workstation (connected, fixtures)", () => {
   });
 
   it("lands on the 오늘 dashboard and switches to a resource pane", async () => {
-    renderWithProviders(<Workstation cfg={{ url: "http://test", token: "tok" }} setCfg={() => {}} />, {
+    renderWithProviders(<Workstation cfg={{ url: "http://test", token: "tok" }} />, {
       connected: true,
       dataProvider,
     });
@@ -64,7 +64,7 @@ describe("Workstation (connected, fixtures)", () => {
   });
 
   it("opens a dashboard mail row directly in the mail pane", async () => {
-    renderWithProviders(<Workstation cfg={{ url: "http://test", token: "tok" }} setCfg={() => {}} />, {
+    renderWithProviders(<Workstation cfg={{ url: "http://test", token: "tok" }} />, {
       connected: true,
       dataProvider: fakeProvider({
         mail: [{ id: "m1", subject: "분기 보고서", from: "lead@corp.com", body: "본문까지 바로 열립니다." }],

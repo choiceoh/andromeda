@@ -10,7 +10,7 @@ import { PANES } from "./panes";
 // on the window's gradient, Zen-browser style. The work area renders only the
 // active pane; ⌘/Ctrl+0–9 shortcuts are derived from the pane registry (the labels
 // are hidden in the rail, but the keys still work).
-export function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: GatewayConfig) => void }) {
+export function Workstation({ cfg }: { cfg: GatewayConfig }) {
   const { view, setView } = useWorkspace();
 
   const shortcuts = useMemo(() => {
@@ -48,7 +48,7 @@ export function Workstation({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: G
           window to move it. Lives in the top padding band, clear of the panels
           and the top-left controls. */}
       <div className="drag-strip" data-tauri-drag-region />
-      <Sidebar cfg={cfg} setCfg={setCfg} />
+      <Sidebar />
       <main className="panel" style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "20px 22px" }}>
         <Active />
       </main>

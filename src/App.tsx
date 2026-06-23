@@ -53,7 +53,7 @@ export function App() {
         options={{ disableTelemetry: true }}
       >
         <WorkspaceProvider connected={connected} cfg={cfg} setCfg={setCfg}>
-          <Workstation cfg={cfg} setCfg={setCfg} />
+          <Workstation cfg={cfg} />
         </WorkspaceProvider>
       </Refine>
     </ErrorBoundary>
