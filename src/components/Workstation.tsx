@@ -50,17 +50,16 @@ export function Workstation({ cfg }: { cfg: GatewayConfig }) {
           and the top-left controls. */}
       <div className="drag-strip" data-tauri-drag-region />
       <Sidebar />
-      {/* 채팅 탭(비업무) → 중앙 채팅 컬럼 + 우측 세션 목록. 그 외 탭 → 작업 pane. */}
-      {view === "chat" ? (
-        <ChatView cfg={cfg} />
-      ) : (
+      {/* 작업 pane은 비채팅 탭에서만 렌더(채팅 탭은 ChatView가 중앙+우측을 차지). */}
+      {view !== "chat" && (
         <main className="panel" style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "20px 22px" }}>
           <div key={view} className="pane-enter">
             <Active />
           </div>
         </main>
       )}
-      {/* 측면 데네브 협업 패널은 항상 마운트(대화 유지). 채팅 탭에선 숨긴다. */}
+      {/* 채팅 탭(비업무)·측면 데네브 패널 모두 항상 마운트(각자 대화 유지) — 비활성 탭에선 숨긴다. */}
+      <ChatView cfg={cfg} hidden={view !== "chat"} />
       <AIPanel cfg={cfg} hidden={view === "chat"} />
     </div>
   );

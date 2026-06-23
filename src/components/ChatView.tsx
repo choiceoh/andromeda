@@ -16,7 +16,7 @@ import { SessionDrawer } from "./SessionDrawer";
 // 패널(업무 · client:main, 활성 pane 컨텍스트를 밀어넣음)과 달리 자체 useChat + chat:*
 // 세션을 가지며, 워크스페이스 컨텍스트를 보내지 않는 순수 대화다. 레이아웃은 중앙 채팅
 // 컬럼(가독성을 위해 메시지를 좁게 가운데 정렬) + 우측 세션 목록.
-export function ChatView({ cfg }: { cfg: GatewayConfig }) {
+export function ChatView({ cfg, hidden = false }: { cfg: GatewayConfig; hidden?: boolean }) {
   const { connected } = useWorkspace();
   const { thinking, busy, turns, send, stop, regenerate, clear, setTurns } = useChat(cfg);
   const [input, setInput] = useState("");
@@ -73,7 +73,7 @@ export function ChatView({ cfg }: { cfg: GatewayConfig }) {
   const lastId = last?.id;
 
   return (
-    <section className="chat-view">
+    <section className="chat-view" style={{ display: hidden ? "none" : "flex" }}>
       <main className="panel chat-main">
         <div className="ai-head">
           <span className="micro">Deneb · 채팅</span>
