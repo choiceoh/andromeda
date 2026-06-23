@@ -1,9 +1,9 @@
 import type { CalEvent, Mail, Todo, View, WorkItem } from "@/types";
 import { useCachedList } from "@/cachedList";
-import { calSpan, fmtDate, text } from "@/format";
+import { calSpan, eventDayKeys, fmtDate, text } from "@/format";
 import { Icon } from "@/components/Icon";
 import { GridNotice } from "@/components/Grid";
-import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { type PaneTarget, useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // "오늘" dashboard — the workstation's landing pane. It adds NO new gateway
 // plumbing: it fans out the existing list resources (calendar/mail/todo/workfeed)
@@ -18,19 +18,24 @@ interface Brief {
   view: View;
   empty: string;
   total: number; // relevant items before the cap — shown in the header and AI projection
-  lines: string[]; // up to MAX compact one-liners (what the AI reads === what's on screen)
+  lines: BriefLine[]; // up to MAX compact one-liners (what the AI reads === what's on screen)
   query: { isLoading: boolean; isError?: boolean; error?: unknown };
+}
+
+interface BriefLine {
+  text: string;
+  target?: PaneTarget;
 }
 
 // One briefing section as text: counted header + capped lines + overflow note.
 function sectionText(b: Brief): string {
   if (b.total === 0) return "";
   const more = b.total > b.lines.length ? `\n- …외 ${b.total - b.lines.length}건` : "";
-  return `[${b.label} ${b.total}건]\n` + b.lines.map((l) => `- ${l}`).join("\n") + more;
+  return `[${b.label} ${b.total}건]\n` + b.lines.map((l) => `- ${l.text}`).join("\n") + more;
 }
 
 export function TodayPane() {
-  const { connected, setView } = useWorkspace();
+  const { connected, openPane, setView } = useWorkspace();
   const cal = useCachedList<CalEvent>("calendar", connected);
   const mail = useCachedList<Mail>("mail", connected);
   const todo = useCachedList<Todo>("todo", connected);
@@ -59,7 +64,10 @@ export function TodayPane() {
       total: events.length,
       lines: events.slice(0, MAX).map((ev) => {
         const span = calSpan(ev.start, ev.end);
-        return `${ev.summary ?? ev.title ?? "(제목 없음)"}${span ? ` · ${span}` : ""}`;
+        return {
+          text: `${ev.summary ?? ev.title ?? "(제목 없음)"}${span ? ` · ${span}` : ""}`,
+          target: { view: "calendar", id: ev.id, dayKey: eventDayKeys(ev.start, ev.end)[0] },
+        };
       }),
     },
     {
@@ -70,7 +78,10 @@ export function TodayPane() {
       total: mails.length,
       lines: mails.slice(0, MAX).map((m) => {
         const who = text(m.from);
-        return `${m.isUnread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}`;
+        return {
+          text: `${m.isUnread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}`,
+          target: { view: "mail", id: m.id },
+        };
       }),
     },
     {
@@ -79,7 +90,10 @@ export function TodayPane() {
       empty: "할일 없음",
       query: todo.query,
       total: todos.length,
-      lines: todos.slice(0, MAX).map((t) => `${t.title}${t.due ? ` · 마감 ${fmtDate(t.due)}` : ""}`),
+      lines: todos.slice(0, MAX).map((t) => ({
+        text: `${t.title}${t.due ? ` · 마감 ${fmtDate(t.due)}` : ""}`,
+        target: { view: "todo", id: t.id },
+      })),
     },
     {
       label: "작업피드",
@@ -87,7 +101,10 @@ export function TodayPane() {
       empty: "작업피드 비어 있음",
       query: work.query,
       total: items.length,
-      lines: items.slice(0, MAX).map((w) => `${w.title ?? "(항목)"}${w.source ? ` · ${w.source}` : ""}`),
+      lines: items.slice(0, MAX).map((w) => ({
+        text: `${w.title ?? "(항목)"}${w.source ? ` · ${w.source}` : ""}`,
+        target: { view: "workfeed", id: w.id },
+      })),
     },
   ];
 
@@ -117,7 +134,13 @@ export function TodayPane() {
           }}
         >
           {briefs.map((b, i) => (
-            <Section key={b.label} brief={b} index={i} onNav={() => setView(b.view)} />
+            <Section
+              key={b.label}
+              brief={b}
+              index={i}
+              onNav={() => setView(b.view)}
+              onOpenLine={(target) => openPane(target.view, target)}
+            />
           ))}
         </div>
       )}
@@ -125,7 +148,17 @@ export function TodayPane() {
   );
 }
 
-function Section({ brief, index, onNav }: { brief: Brief; index: number; onNav: () => void }) {
+function Section({
+  brief,
+  index,
+  onNav,
+  onOpenLine,
+}: {
+  brief: Brief;
+  index: number;
+  onNav: () => void;
+  onOpenLine: (target: PaneTarget) => void;
+}) {
   const { label, total, lines, empty, query } = brief;
   return (
     <section className="fade-up" style={{ minWidth: 0, animationDelay: `${index * 60}ms` }}>
@@ -155,9 +188,12 @@ function Section({ brief, index, onNav }: { brief: Brief; index: number; onNav: 
       </button>
       <GridNotice query={query} count={lines.length} empty={empty}>
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {lines.map((l, i) => (
-            <div
+          {lines.map((line, i) => (
+            <button
               key={i}
+              type="button"
+              onClick={() => (line.target ? onOpenLine(line.target) : onNav())}
+              title={`${label}에서 열기`}
               style={{
                 fontSize: 13,
                 color: "var(--ink-2)",
@@ -165,10 +201,16 @@ function Section({ brief, index, onNav }: { brief: Brief; index: number; onNav: 
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 lineHeight: 1.5,
+                textAlign: "left",
+                background: "none",
+                border: 0,
+                padding: 0,
+                cursor: "pointer",
+                fontFamily: "inherit",
               }}
             >
-              {l}
-            </div>
+              {line.text}
+            </button>
           ))}
           {total > lines.length && (
             <div style={{ fontSize: 12, color: "var(--muted-2)", marginTop: 2 }}>…외 {total - lines.length}건</div>

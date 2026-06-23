@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { WorkItem } from "@/types";
 import { serializeList } from "@/aiText";
 import { useCachedList } from "@/cachedList";
@@ -13,10 +13,17 @@ import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 const isQuestion = (w: WorkItem) => (w.source ?? "").includes("question");
 
 export function WorkfeedPane() {
-  const { connected } = useWorkspace();
+  const { connected, consumePaneTarget, paneTarget } = useWorkspace();
   const { result, query } = useCachedList<WorkItem>("workfeed", connected);
   const items = result?.data ?? [];
+  const [selectedId, setSelectedId] = useState<string | number | undefined>();
   const { run, error, busy } = useAction(() => void query.refetch());
+
+  useEffect(() => {
+    if (paneTarget?.view !== "workfeed" || paneTarget.id === undefined) return;
+    setSelectedId(paneTarget.id);
+    consumePaneTarget();
+  }, [consumePaneTarget, paneTarget]);
 
   const aiText = serializeList(
     "작업피드",
@@ -82,7 +89,12 @@ export function WorkfeedPane() {
       <h2 style={{ marginTop: 2 }}>작업피드</h2>
       {error && <p className="pane-error">오류: {error}</p>}
       <GridNotice query={query} count={items.length} empty="작업피드가 비어 있습니다.">
-        <Grid columns={columns} rows={items} getKey={(w) => String(w.id)} />
+        <Grid
+          columns={columns}
+          rows={items}
+          getKey={(w) => String(w.id)}
+          isRowSelected={(w) => String(w.id) === String(selectedId)}
+        />
       </GridNotice>
     </>
   );

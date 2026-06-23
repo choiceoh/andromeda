@@ -2,8 +2,10 @@
 // the proactive events subscription.
 import { useEffect, useRef, useState } from "react";
 import { useInvalidate } from "@refinedev/core";
+import { clearCachedResource } from "./cachedList";
 import { type ChatToolEvent, type GatewayConfig, chatStream, ping } from "./gateway";
 import { type ProactiveEvent, subscribeEvents } from "./events";
+import { relatedResourcesForResource, relatedResourcesForTools } from "./resourceRefresh";
 
 // An assistant reply is an ordered list of text segments and tool chips, so a
 // tool call rendered mid-reply keeps its place in the prose (text → tool → text).
@@ -108,6 +110,7 @@ export function useChat(cfg: GatewayConfig): ChatState {
     setBusy(true);
     const controller = new AbortController();
     abortRef.current = controller;
+    const seenTools = new Set<string>();
     let failed = false;
     let stopped = false;
 
@@ -153,6 +156,7 @@ export function useChat(cfg: GatewayConfig): ChatState {
           },
           onTool: (ev) => {
             setThinking("");
+            if (!ev.isError && ev.tool) seenTools.add(ev.tool);
             upsertTool(ev);
           },
           // The AI may have changed back-end data via a tool — refresh the active grid.
@@ -168,7 +172,14 @@ export function useChat(cfg: GatewayConfig): ChatState {
                 status: "done",
               };
             });
-            if (opts.activeResource) invalidate({ resource: opts.activeResource, invalidates: ["list"] });
+            const resources =
+              seenTools.size > 0
+                ? relatedResourcesForTools(seenTools, opts.activeResource)
+                : relatedResourcesForResource(opts.activeResource);
+            for (const resource of resources) {
+              if (seenTools.size > 0) clearCachedResource(resource);
+              invalidate({ resource, invalidates: ["list"] });
+            }
           },
           onError: (e) => {
             failed = true;

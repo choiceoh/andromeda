@@ -25,6 +25,23 @@ export function cachedOneStorageKey(resource: string, id: BaseKey): string {
   return `andromeda.oneCache.${resource}.${encodeURIComponent(String(id))}`;
 }
 
+export function clearCachedResource(resource: string): void {
+  try {
+    const listExact = cachedListStorageKey(resource);
+    const listPrefix = `${listExact}.`;
+    const onePrefix = `andromeda.oneCache.${resource}.`;
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (key === listExact || key.startsWith(listPrefix) || key.startsWith(onePrefix)) keys.push(key);
+    }
+    for (const key of keys) localStorage.removeItem(key);
+  } catch {
+    /* ignore storage quota / private mode failures */
+  }
+}
+
 function readCachedList<T>(resource: string): CachedListSnapshot<T> | undefined {
   try {
     const raw = localStorage.getItem(cachedListStorageKey(resource));

@@ -63,6 +63,20 @@ describe("Workstation (connected, fixtures)", () => {
     expect(await screen.findByPlaceholderText("새 할일…")).toBeInTheDocument();
   });
 
+  it("opens a dashboard mail row directly in the mail pane", async () => {
+    renderWithProviders(<Workstation cfg={{ url: "http://test", token: "tok" }} setCfg={() => {}} />, {
+      connected: true,
+      dataProvider: fakeProvider({
+        mail: [{ id: "m1", subject: "분기 보고서", from: "lead@corp.com", body: "본문까지 바로 열립니다." }],
+      }),
+    });
+
+    await userEvent.click(await screen.findByRole("button", { name: /분기 보고서/ }));
+
+    expect(await screen.findByRole("heading", { name: "메일" })).toBeInTheDocument();
+    expect(await within(screen.getByLabelText("메일 상세")).findByText("본문까지 바로 열립니다.")).toBeInTheDocument();
+  });
+
   it("supports multiline AI prompts while plain Enter sends", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {

@@ -1,12 +1,23 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { TodayPane } from "./TodayPane";
 import { cachedListStorageKey } from "@/cachedList";
 import { fakeProvider, renderWithProviders } from "@/test/util";
+import { useWorkspace } from "@/workspaceContext";
 
 afterEach(() => {
   localStorage.clear();
 });
+
+function WorkspaceProbe() {
+  const { paneTarget, view } = useWorkspace();
+  return (
+    <output data-testid="workspace-target">
+      {view}:{paneTarget?.view ?? ""}:{paneTarget?.id ?? ""}:{paneTarget?.dayKey ?? ""}
+    </output>
+  );
+}
 
 describe("TodayPane (오늘 대시보드)", () => {
   it("aggregates each resource into a section card", async () => {
@@ -34,6 +45,31 @@ describe("TodayPane (오늘 대시보드)", () => {
     renderWithProviders(<TodayPane />, { connected: true, dataProvider: fakeProvider({ todo: many }) });
     // 9 open todos, capped at 6 → an "외 3건" overflow note.
     expect(await screen.findByText(/외 3건/)).toBeInTheDocument();
+  });
+
+  it("opens individual briefing rows with pane targets", async () => {
+    const dataProvider = fakeProvider({
+      calendar: [{ id: "c1", title: "스탠드업", start: { dateTime: "2026-06-18T09:00:00" } }],
+      mail: [{ id: "m1", subject: "예산 검토", from: "kim@corp.com" }],
+      todo: [{ id: "t1", title: "보고서 초안", done: false }],
+      workfeed: [{ id: "w1", title: "일정 충돌 감지", source: "alert" }],
+    });
+    renderWithProviders(
+      <>
+        <TodayPane />
+        <WorkspaceProbe />
+      </>,
+      { connected: true, dataProvider },
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /예산 검토/ }));
+    expect(screen.getByTestId("workspace-target")).toHaveTextContent("mail:mail:m1:");
+
+    await userEvent.click(screen.getByRole("button", { name: /스탠드업/ }));
+    expect(screen.getByTestId("workspace-target")).toHaveTextContent("calendar:calendar:c1:2026-6-18");
+
+    await userEvent.click(screen.getByRole("button", { name: /보고서 초안/ }));
+    expect(screen.getByTestId("workspace-target")).toHaveTextContent("todo:todo:t1:");
   });
 
   it("renders cached todo and workfeed sections while the gateway refresh is still pending", () => {

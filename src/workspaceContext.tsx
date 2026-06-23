@@ -11,6 +11,13 @@ import { DOC_STORAGE_KEY, readStoredDoc } from "./docStorage";
 import type { GatewayConfig } from "./gateway";
 import type { View } from "./types";
 
+export interface PaneTarget {
+  view: View;
+  id?: string | number;
+  dayKey?: string;
+  path?: string;
+}
+
 interface WorkspaceCtx {
   connected: boolean;
   // The gateway config, exposed so query-driven panes (wiki/search) can call
@@ -21,6 +28,9 @@ interface WorkspaceCtx {
   setCfg: (c: GatewayConfig) => void;
   view: View;
   setView: (v: View) => void;
+  paneTarget: PaneTarget | null;
+  openPane: (view: View, target?: Omit<PaneTarget, "view">) => void;
+  consumePaneTarget: () => void;
   // `doc` lives here (not in the pane) so the scratch document survives pane
   // switches even though the DocPane unmounts.
   doc: string;
@@ -55,6 +65,7 @@ export function WorkspaceProvider({
   const [aiText, setAiText] = useState("");
   const [activeResource, setActiveResource] = useState<string | undefined>(undefined);
   const [wikiTarget, setWikiTarget] = useState<string | null>(null);
+  const [paneTarget, setPaneTarget] = useState<PaneTarget | null>(null);
 
   const registerPane = (resource: string | undefined, t: string) => {
     setActiveResource(resource);
@@ -66,6 +77,11 @@ export function WorkspaceProvider({
     setView("wiki");
   };
   const consumeWikiTarget = () => setWikiTarget(null);
+  const openPane = (nextView: View, target?: Omit<PaneTarget, "view">) => {
+    setPaneTarget(target ? { view: nextView, ...target } : null);
+    setView(nextView);
+  };
+  const consumePaneTarget = () => setPaneTarget(null);
 
   useEffect(() => {
     try {
@@ -84,6 +100,9 @@ export function WorkspaceProvider({
         setCfg,
         view,
         setView,
+        paneTarget,
+        openPane,
+        consumePaneTarget,
         doc,
         setDoc,
         aiText,

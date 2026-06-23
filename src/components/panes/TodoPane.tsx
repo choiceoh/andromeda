@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCreate, useDelete, useUpdate } from "@refinedev/core";
 import type { Todo } from "@/types";
 import { serializeList } from "@/aiText";
@@ -9,14 +9,21 @@ import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 import { Field, Modal } from "@/components/Modal";
 
 export function TodoPane() {
-  const { connected } = useWorkspace();
+  const { connected, consumePaneTarget, paneTarget } = useWorkspace();
   const [newTodo, setNewTodo] = useState("");
   const [editing, setEditing] = useState<Todo | null>(null);
   const { result, query } = useCachedList<Todo>("todo", connected);
-  const todos = result?.data ?? [];
+  const todos = useMemo(() => result?.data ?? [], [result?.data]);
   const { mutate: createTodo } = useCreate();
   const { mutate: updateTodo } = useUpdate();
   const { mutate: deleteTodo } = useDelete();
+
+  useEffect(() => {
+    if (paneTarget?.view !== "todo" || paneTarget.id === undefined) return;
+    const match = todos.find((t) => String(t.id) === String(paneTarget.id));
+    if (match) setEditing(match);
+    if (!query.isLoading) consumePaneTarget();
+  }, [consumePaneTarget, paneTarget, query.isLoading, todos]);
 
   // Serialize the grid to text so Deneb's AI reads exactly what's on screen.
   const aiText = serializeList(

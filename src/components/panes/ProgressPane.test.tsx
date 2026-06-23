@@ -1,11 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ProgressPane } from "./ProgressPane";
 import { fakeProvider, renderWithProviders } from "@/test/util";
+import { useWorkspace } from "@/workspaceContext";
 
 afterEach(() => {
   localStorage.clear();
 });
+
+function WorkspaceProbe() {
+  const { view, wikiTarget } = useWorkspace();
+  return <output data-testid="workspace-target">{`${view}:${wikiTarget ?? ""}`}</output>;
+}
 
 describe("ProgressPane (프로젝트 진행상황)", () => {
   it("renders a card per project with headline, bullets, and a due badge", async () => {
@@ -32,6 +39,24 @@ describe("ProgressPane (프로젝트 진행상황)", () => {
     expect(screen.getByText(/마감 6\/30/)).toBeInTheDocument();
     // A second project with no due still renders.
     expect(screen.getByText("영광 풍력")).toBeInTheDocument();
+  });
+
+  it("opens a project's wiki page from a card with a path", async () => {
+    renderWithProviders(
+      <>
+        <ProgressPane />
+        <WorkspaceProbe />
+      </>,
+      {
+        connected: true,
+        dataProvider: fakeProvider({
+          progress: [{ project: "새만금 태양광", headline: "PPA 협상 막바지", path: "projects/saemangeum" }],
+        }),
+      },
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /새만금 태양광/ }));
+    expect(screen.getByTestId("workspace-target")).toHaveTextContent("wiki:projects/saemangeum");
   });
 
   it("shows the empty notice when there are no digests", async () => {
