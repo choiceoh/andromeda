@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { clearCachedResource } from "@/cachedList";
+import { projectList } from "@/aiText";
 import { FILES_RPC } from "@/resources";
 import { readCachedRpc, rpcCacheKey, writeCachedRpc } from "@/rpcCache";
 import type { FileEntry } from "@/types";
@@ -30,11 +31,11 @@ export function FilesPane() {
 
   useRegisterPane(
     FILES_RESOURCE,
-    entries.length
-      ? `[파일 ${searching ? "검색" : path || "/"}]\n${entries
-          .map((e) => `- ${isFolder(e) ? "[폴더] " : ""}${entryPath(e)}${e.size ? ` (${formatBytes(e.size)})` : ""}`)
-          .join("\n")}`
-      : "",
+    projectList(
+      `[파일 ${searching ? "검색" : path || "/"}]`,
+      entries,
+      (e) => `- ${isFolder(e) ? "[폴더] " : ""}${entryPath(e)}${e.size ? ` (${formatBytes(e.size)})` : ""}`,
+    ),
   );
 
   useEffect(() => {
