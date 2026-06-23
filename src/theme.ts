@@ -25,16 +25,6 @@ export const font = '"Pretendard Variable", Pretendard, system-ui, "Segoe UI", "
 // Inner padding for a panel's scrollable content area.
 export const pane: CSSProperties = { padding: 18, boxSizing: "border-box", overflow: "auto" };
 
-// Inline mirror of the .field class, for panes that spread it onto inputs.
-export const field: CSSProperties = {
-  background: "var(--panel)",
-  color: "var(--ink)",
-  border: "1px solid var(--line-2)",
-  borderRadius: "var(--radius-ctl)",
-  padding: "8px 11px",
-  fontSize: 13,
-};
-
 export const muted: CSSProperties = { color: "var(--muted-2)" };
 
 // One-line ellipsis truncation for tight grid cells.

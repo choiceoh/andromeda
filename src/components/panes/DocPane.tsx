@@ -1,4 +1,4 @@
-import { field, font } from "@/theme";
+import { font } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // Client-only scratch document. Its text lives in the workspace context so it
@@ -15,8 +15,8 @@ export function DocPane() {
         value={doc}
         onChange={(e) => setDoc(e.target.value)}
         placeholder="여기에 문서를 작성하세요. 우측 AI가 이 내용을 텍스트로 읽습니다."
+        className="field"
         style={{
-          ...field,
           width: "100%",
           height: "70vh",
           boxSizing: "border-box",

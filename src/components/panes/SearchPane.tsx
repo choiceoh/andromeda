@@ -3,7 +3,7 @@ import { callRpc } from "@/gateway";
 import { SEARCH_RPC } from "@/resources";
 import type { SearchHit } from "@/types";
 import { errText } from "@/format";
-import { field, line, muted } from "@/theme";
+import { line } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 
 // search.all fans out across wiki / diary / people buckets server-side. Flatten the
@@ -61,7 +61,8 @@ export function SearchPane() {
       <h2 style={{ marginTop: 2 }}>통합 검색</h2>
       <div style={{ display: "flex", gap: 6, marginBottom: 12, maxWidth: 640 }}>
         <input
-          style={{ ...field, flex: 1 }}
+          className="field"
+          style={{ flex: 1 }}
           placeholder={connected ? "위키·다이어리·연락처 통합 검색…" : "먼저 게이트웨이에 연결하세요"}
           value={q}
           disabled={!connected}
@@ -79,10 +80,10 @@ export function SearchPane() {
           검색
         </button>
       </div>
-      {status && <p style={muted}>{status}</p>}
+      {status && <p className="pane-status">{status}</p>}
       <div style={{ display: "grid", gap: 8, maxWidth: 760 }}>
         {hits.map((h, i) => (
-          <div key={(h.path ?? h.id ?? i) + String(i)} style={{ borderTop: line, paddingTop: 8 }}>
+          <div key={`${h.type ?? ""}:${h.path ?? h.title ?? i}`} style={{ borderTop: line, paddingTop: 8 }}>
             {h.type && <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: "0.02em" }}>{h.type}</div>}
             <div style={{ fontWeight: 600 }}>{h.title ?? "(제목 없음)"}</div>
             {h.snippet && <div style={{ opacity: 0.7, fontSize: 13 }}>{h.snippet}</div>}

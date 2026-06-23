@@ -87,7 +87,7 @@ export function MailPane() {
   return (
     <>
       <h2 style={{ marginTop: 2 }}>메일</h2>
-      {error && <p style={{ color: "var(--due)", fontSize: 12, margin: "0 0 8px" }}>오류: {error}</p>}
+      {error && <p className="pane-error">오류: {error}</p>}
       <GridNotice query={query} count={mails.length} empty="메일이 없습니다.">
         <div className="mail-split">
           <div className="mail-list">

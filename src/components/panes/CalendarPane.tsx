@@ -72,7 +72,7 @@ export function CalendarPane() {
   return (
     <>
       <h2 style={{ marginTop: 2 }}>일정</h2>
-      {error && <p style={{ color: "var(--due)", fontSize: 12, margin: "0 0 8px" }}>오류: {error}</p>}
+      {error && <p className="pane-error">오류: {error}</p>}
 
       {connected && (
         <MonthGrid
