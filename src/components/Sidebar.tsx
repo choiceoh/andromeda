@@ -3,6 +3,7 @@ import { type GatewayConfig, saveConfig } from "@/gateway";
 import { useGatewayStatus } from "@/hooks";
 import { useWorkspace } from "@/workspaceContext";
 import { Icon } from "./Icon";
+import { LiveDot } from "./LiveDot";
 import { WindowControls } from "./WindowControls";
 import { PANES } from "./panes";
 
@@ -79,10 +80,7 @@ export function Sidebar({ cfg, setCfg }: { cfg: GatewayConfig; setCfg: (c: Gatew
           style={{ fontSize: 11, color: "var(--muted-2)" }}
           title="게이트웨이 연결"
         >
-          <span
-            className={"live-dot" + (connected ? " pulse" : "")}
-            style={{ background: connected ? "var(--online)" : "var(--faint)" }}
-          />
+          <LiveDot connected={connected} pulse />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {connected ? host : "연결"}
           </span>

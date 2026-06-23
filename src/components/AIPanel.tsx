@@ -12,6 +12,7 @@ import { type ChatTurn, useChat } from "@/hooks";
 import { errText } from "@/format";
 import { useWorkspace } from "@/workspaceContext";
 import { Icon } from "./Icon";
+import { LiveDot } from "./LiveDot";
 import { Markdown } from "./Markdown";
 import { ModelPicker } from "./ModelPicker";
 import { ProactivePanel } from "./ProactivePanel";
@@ -178,10 +179,7 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
         >
           <Icon name="history" size={15} />
         </button>
-        <span
-          className={"live-dot" + (connected ? " pulse" : "")}
-          style={{ background: connected ? "var(--online)" : "var(--faint)" }}
-        />
+        <LiveDot connected={connected} pulse />
       </div>
 
       {sessionsOpen && (
