@@ -33,7 +33,7 @@ describe("App (disconnected)", () => {
   it("renders the workstation shell with registry-driven nav", () => {
     renderWithProviders(<App />);
     expect(screen.getByRole("navigation")).toBeInTheDocument();
-    for (const label of ["할일", "노트북", "메일", "일정"]) {
+    for (const label of ["채팅", "할일", "노트북", "메일", "일정"]) {
       expect(screen.getByRole("button", { name: new RegExp(label) })).toBeInTheDocument();
     }
     expect(screen.getByText(/미연결/)).toBeInTheDocument();
@@ -61,6 +61,19 @@ describe("Workstation (connected, fixtures)", () => {
     const nav = screen.getByRole("navigation");
     await userEvent.click(within(nav).getByRole("button", { name: /할일/ }));
     expect(await screen.findByRole("button", { name: /새 할일/ })).toBeInTheDocument();
+  });
+
+  it("opens the 비업무 채팅 탭 from the rail (center chat greets)", async () => {
+    renderWithProviders(<Workstation cfg={{ url: "http://test", token: "tok" }} />, {
+      connected: true,
+      dataProvider,
+    });
+    // not in the chat tab by default (lands on 오늘)
+    expect(screen.queryByText("안녕하세요? 무슨 대화를 할까요?")).not.toBeInTheDocument();
+    const nav = screen.getByRole("navigation");
+    await userEvent.click(within(nav).getByRole("button", { name: /채팅/ }));
+    // the center chat column greets (its own non-work conversation)
+    expect(await screen.findByText("안녕하세요? 무슨 대화를 할까요?")).toBeInTheDocument();
   });
 
   it("opens a dashboard mail row directly in the mail pane", async () => {

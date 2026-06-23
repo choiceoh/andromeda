@@ -15,9 +15,15 @@ export function useSessions(
   connected: boolean,
   busy: boolean,
   chat: { clear: () => void; setTurns: (turns: ChatTurn[]) => void },
+  opts?: { mainKey?: string; filter?: string },
 ) {
+  // mainKey = the "새 대화" / default session; filter scopes the recent list to a
+  // namespace so the 비업무 채팅 탭(chat:*) and the work panel(client:main) don't mix.
+  const mainKey = opts?.mainKey ?? MAIN_SESSION;
+  const filter = opts?.filter;
+  const keep = (s: SessionRow[]) => (filter ? s.filter((r) => r.key.startsWith(filter)) : s);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
-  const [sessionKey, setSessionKey] = useState(MAIN_SESSION);
+  const [sessionKey, setSessionKey] = useState(mainKey);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [sessionErr, setSessionErr] = useState("");
 
@@ -30,7 +36,7 @@ export function useSessions(
     }
     let cancelled = false;
     void recentSessions(cfg, 20)
-      .then((s) => !cancelled && setSessions(s))
+      .then((s) => !cancelled && setSessions(keep(s)))
       .catch(() => {});
     return () => {
       cancelled = true;
@@ -40,7 +46,7 @@ export function useSessions(
 
   async function refreshSessions() {
     try {
-      setSessions(await recentSessions(cfg, 20));
+      setSessions(keep(await recentSessions(cfg, 20)));
       setSessionErr("");
     } catch (e) {
       setSessionErr(errText(e));
@@ -56,7 +62,7 @@ export function useSessions(
   function newChat() {
     if (busy) return;
     setSessionsOpen(false);
-    setSessionKey(MAIN_SESSION);
+    setSessionKey(mainKey);
     chat.clear();
   }
 

@@ -200,6 +200,7 @@ export interface Notebook extends NotebookSummary {
 // `search` are query-driven custom panes.
 export type View =
   | "today"
+  | "chat"
   | "progress"
   | "todo"
   | "notebook"

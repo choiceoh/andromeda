@@ -428,6 +428,74 @@ textarea {
   color: var(--muted);
 }
 
+/* 채팅 탭 (비업무 전용 대화) — 좌측 "채팅" 탭 → 중앙 채팅 컬럼 + 우측 세션 목록. 측면
+ * 데네브 패널(업무·client:main)과 독립된 자체 대화(chat:*) surface. */
+.chat-view {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: var(--gap);
+}
+.chat-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+}
+.chat-sessions {
+  width: 240px;
+  flex: 0 0 auto;
+  padding: 14px 12px;
+  overflow: auto;
+}
+/* the history fills the right column rather than the compact in-panel drawer */
+.chat-sessions .session-drawer {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  max-height: none;
+}
+/* center the conversation in a readable column; user/assistant still hug right/left
+ * within it via the existing .ai-turn align-self. */
+.chat-transcript {
+  padding-inline: max(16px, calc((100% - 760px) / 2));
+}
+/* a touch larger conversational text + a rounder user bubble in the dedicated tab */
+.chat-transcript .ai-turn-body {
+  font-size: 14px;
+  line-height: 1.66;
+}
+.chat-transcript .ai-turn.user .ai-turn-label {
+  display: none;
+}
+.chat-transcript .ai-turn.user .ai-turn-body {
+  border-radius: 16px 16px 5px 16px;
+  padding: 9px 13px;
+}
+/* greeting empty state — the Deneb sparkle + a casual prompt, centered */
+.chat-greeting {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+.chat-greeting p {
+  font-size: 16px;
+  color: var(--ink-2);
+}
+/* composer matches the centered message column */
+.chat-main .ai-composer {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+
 /* Deneb "응답 중" sparkle — the StarIndicator port (see DenebStar.tsx). The burst
  * (scale + opacity) and glow run on CSS keyframes, so prefers-reduced-motion calms
  * them; the clay-derived fill keeps the single warm accent. */
