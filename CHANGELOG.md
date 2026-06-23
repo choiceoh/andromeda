@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.9](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.8...andromeda-v0.0.9) (2026-06-23)
+
+
+### Features
+
+* add dashboard deeplinks and cache refresh ([fe8c27a](https://github.com/choiceoh/andromeda/commit/fe8c27aed9d3dd26704e4cd69b35e82cd253e9fd))
+* 마크다운 렌더러 네이티브 수준으로 개선 (GFM) ([#44](https://github.com/choiceoh/andromeda/issues/44)) ([9a66291](https://github.com/choiceoh/andromeda/commit/9a66291b98190fe37fa29c03d65c272e1a39c5b3))
+* 마크다운 수식 렌더링 — KaTeX 도입 ([#48](https://github.com/choiceoh/andromeda/issues/48)) ([1119ddd](https://github.com/choiceoh/andromeda/commit/1119ddd787e16dcc74199f2ce357d8f325bbd8f7))
+* 메일 상세 심화 — AI 분석·발신자 컨텍스트·질문·액션 (Phase B) ([#52](https://github.com/choiceoh/andromeda/issues/52)) ([c4853cd](https://github.com/choiceoh/andromeda/commit/c4853cd650fc8993a3091ee0bd140c77e690a0f7))
+* 캘린더 현재 달 리스트에서 이미 지난 일정 숨김 ([#49](https://github.com/choiceoh/andromeda/issues/49)) ([2170a88](https://github.com/choiceoh/andromeda/commit/2170a885fd324e13ca6397ae11602a5dcb42f138))
+
 ## [0.0.8](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.7...andromeda-v0.0.8) (2026-06-23)
 
 
