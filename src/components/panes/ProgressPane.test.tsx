@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
 import { ProgressPane } from "./ProgressPane";
 import { fakeProvider, renderWithProviders } from "@/test/util";
+
+afterEach(() => {
+  localStorage.clear();
+});
 
 describe("ProgressPane (프로젝트 진행상황)", () => {
   it("renders a card per project with headline, bullets, and a due badge", async () => {

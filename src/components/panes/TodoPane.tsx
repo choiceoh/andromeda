@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useCreate, useDelete, useList, useUpdate } from "@refinedev/core";
+import { useCreate, useDelete, useUpdate } from "@refinedev/core";
 import type { Todo } from "@/types";
 import { serializeList } from "@/aiText";
+import { useCachedList } from "@/cachedList";
 import { errText, fmtDate } from "@/format";
 import { field } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
@@ -12,7 +13,7 @@ export function TodoPane() {
   const { connected } = useWorkspace();
   const [newTodo, setNewTodo] = useState("");
   const [editing, setEditing] = useState<Todo | null>(null);
-  const { result, query } = useList<Todo>({ resource: "todo", queryOptions: { enabled: connected } });
+  const { result, query } = useCachedList<Todo>("todo", connected);
   const todos = result?.data ?? [];
   const { mutate: createTodo } = useCreate();
   const { mutate: updateTodo } = useUpdate();

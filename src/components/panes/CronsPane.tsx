@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useList } from "@refinedev/core";
 import type { Cron } from "@/types";
 import { serializeList } from "@/aiText";
+import { useCachedList } from "@/cachedList";
 import { CRON_RPC } from "@/resources";
 import { color, ellipsis } from "@/theme";
 import { fmtDate } from "@/format";
@@ -14,7 +14,7 @@ const hasError = (c: Cron) => Boolean(c.lastError) || (c.consecutiveErrors ?? 0)
 
 export function CronsPane() {
   const { connected } = useWorkspace();
-  const { result, query } = useList<Cron>({ resource: "crons", queryOptions: { enabled: connected } });
+  const { result, query } = useCachedList<Cron>("crons", connected);
   const crons = result?.data ?? [];
   const { run, error, busy } = useAction(() => void query.refetch());
   const [selected, setSelected] = useState<Cron | null>(null);

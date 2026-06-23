@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useList } from "@refinedev/core";
 import type { WorkItem } from "@/types";
 import { serializeList } from "@/aiText";
+import { useCachedList } from "@/cachedList";
 import { WORKFEED_RPC } from "@/resources";
 import { fmtDate } from "@/format";
 import { useAction } from "@/useAction";
@@ -14,7 +14,7 @@ const isQuestion = (w: WorkItem) => (w.source ?? "").includes("question");
 
 export function WorkfeedPane() {
   const { connected } = useWorkspace();
-  const { result, query } = useList<WorkItem>({ resource: "workfeed", queryOptions: { enabled: connected } });
+  const { result, query } = useCachedList<WorkItem>("workfeed", connected);
   const items = result?.data ?? [];
   const { run, error, busy } = useAction(() => void query.refetch());
 

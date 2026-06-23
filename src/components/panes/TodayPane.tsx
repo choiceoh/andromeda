@@ -1,4 +1,3 @@
-import { useList } from "@refinedev/core";
 import type { CalEvent, Mail, Todo, View, WorkItem } from "@/types";
 import { useCachedList } from "@/cachedList";
 import { calSpan, fmtDate, text } from "@/format";
@@ -34,8 +33,8 @@ export function TodayPane() {
   const { connected, setView } = useWorkspace();
   const cal = useCachedList<CalEvent>("calendar", connected);
   const mail = useCachedList<Mail>("mail", connected);
-  const todo = useList<Todo>({ resource: "todo", queryOptions: { enabled: connected } });
-  const work = useList<WorkItem>({ resource: "workfeed", queryOptions: { enabled: connected } });
+  const todo = useCachedList<Todo>("todo", connected);
+  const work = useCachedList<WorkItem>("workfeed", connected);
 
   const events = cal.result?.data ?? [];
   // Recent mail, unread first — robust if `isUnread` is absent (order is just preserved).

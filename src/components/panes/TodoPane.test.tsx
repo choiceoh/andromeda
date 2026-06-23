@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { DataProvider } from "@refinedev/core";
 import { fakeProvider, renderWithProviders } from "@/test/util";
 import { TodoPane } from "./TodoPane";
+
+afterEach(() => {
+  localStorage.clear();
+});
 
 function capturing(fixtures: Record<string, unknown[]>, sink: Record<string, unknown>[]): DataProvider {
   const base = fakeProvider(fixtures);
