@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.0.11](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.10...andromeda-v0.0.11) (2026-06-23)
+
+
+### Features
+
+* add mail attachments wiki browse and files ([#68](https://github.com/choiceoh/andromeda/issues/68)) ([48be8c6](https://github.com/choiceoh/andromeda/commit/48be8c6ca397a45e5885c90bfff28d514892f6f5))
+* 메일 보낸이 이름만 표시, 목록 인라인 삭제 제거 ([#69](https://github.com/choiceoh/andromeda/issues/69)) ([ee9e8d3](https://github.com/choiceoh/andromeda/commit/ee9e8d3f61ad7dca3971b62bc21d08d0e86a696d))
+* 메일·시간 표시 개선 — 24시간제, 목록 제목만, 최근 메일 상대 시간 ([#60](https://github.com/choiceoh/andromeda/issues/60)) ([76e4624](https://github.com/choiceoh/andromeda/commit/76e46240494dbeb75a6b9519b87cea7b9ef24880))
+* 문서 → 노트북(LM) — Deneb 거래 노트북 열람 + 근거 기반 AI Q&A ([#70](https://github.com/choiceoh/andromeda/issues/70)) ([b492a43](https://github.com/choiceoh/andromeda/commit/b492a430013855b34e2d845dc1c3788e0b77a9df))
+* 설정에서 좌측 탭 표시 항목 켜고 끄기 ([#64](https://github.com/choiceoh/andromeda/issues/64)) ([a689493](https://github.com/choiceoh/andromeda/commit/a689493cc9dc7102ddd4cef23931be52690ad3a7))
+* 할일 추가 모달(+버튼) · 메인 패널 폭 적응형 ([#71](https://github.com/choiceoh/andromeda/issues/71)) ([b8ce0ba](https://github.com/choiceoh/andromeda/commit/b8ce0baa582a2994c4239f36014ae7c2e99aa928))
+
+
+### Bug Fixes
+
+* 워크피드 답변을 실제 RPC로 교체 + 재생성/정정 추가 ([#66](https://github.com/choiceoh/andromeda/issues/66)) ([032fe5d](https://github.com/choiceoh/andromeda/commit/032fe5dd15552cf0c7dd8e96fe7de3a0d1cfcd8d))
+* 위키를 열면 바로 카테고리/페이지 목록 표시 (검색 강요 제거) ([#63](https://github.com/choiceoh/andromeda/issues/63)) ([e28bd13](https://github.com/choiceoh/andromeda/commit/e28bd13daa22b71813db14e7907509ffd67cf742))
+
 ## [0.0.10](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.9...andromeda-v0.0.10) (2026-06-23)
 
 
