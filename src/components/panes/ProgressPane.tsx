@@ -73,7 +73,7 @@ function DigestCard({ digest, index }: { digest: ProjectDigest; index: number })
         )}
       </div>
       {headline && (
-        <p style={{ fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.5, margin: "5px 0 0" }}>{headline}</p>
+        <p style={{ fontSize: 14, color: "var(--ink-2)", lineHeight: 1.5, margin: "5px 0 0" }}>{headline}</p>
       )}
       {bullets && bullets.length > 0 && (
         <ul style={{ margin: "8px 0 0", padding: 0, listStyle: "none", display: "grid", gap: 4 }}>
