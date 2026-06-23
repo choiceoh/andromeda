@@ -492,14 +492,14 @@ textarea {
   background: transparent;
 }
 .session-row-title {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .session-row-meta {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--muted-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -675,7 +675,7 @@ textarea {
   border-bottom: 1px solid var(--line-2);
 }
 .md-codelang {
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted-2);
