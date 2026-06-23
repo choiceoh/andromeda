@@ -15,9 +15,12 @@ function toolLabel(tool: string): string {
 export function ToolChip({ part }: { part: ToolPart }) {
   const done = part.state === "completed";
   const cls = "tool-chip" + (part.isError ? " error" : done ? " done" : " running");
+  // The icon alone carries the running/done/error state visually — label it so
+  // assistive tech announces it too (otherwise the chip reads as just a name).
+  const stateText = part.isError ? "실패" : done ? "완료" : "실행 중";
   return (
     <div className={cls}>
-      <span className="tool-chip-ico" aria-hidden="true">
+      <span className="tool-chip-ico" role="img" aria-label={stateText}>
         {!done ? (
           <span className="tool-spin" />
         ) : part.isError ? (
