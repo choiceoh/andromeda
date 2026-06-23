@@ -10,6 +10,7 @@ let createParams: Record<string, unknown> | null;
 let moveParams: Record<string, unknown> | null;
 
 beforeEach(() => {
+  localStorage.clear();
   writeParams = null;
   createParams = null;
   moveParams = null;
@@ -57,6 +58,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  localStorage.clear();
   vi.unstubAllGlobals();
 });
 
