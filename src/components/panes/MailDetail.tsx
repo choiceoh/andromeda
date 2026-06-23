@@ -14,7 +14,7 @@ import {
   senderContext,
 } from "@/gateway";
 import type { Mail } from "@/types";
-import { errText, firstString, fmtDate, text } from "@/format";
+import { errText, firstString, fmtMailDate, text } from "@/format";
 import { useWorkspace } from "@/workspaceContext";
 import { Markdown } from "@/components/Markdown";
 
@@ -74,7 +74,7 @@ export function MailDetail({
         <div className="mail-detail-meta">
           {who || "—"}
           {to ? ` → ${to}` : ""}
-          {mail.date ? ` · ${fmtDate(mail.date)}` : ""}
+          {mail.date ? ` · ${fmtMailDate(mail.date)}` : ""}
         </div>
         {mail.labels && mail.labels.length > 0 && (
           <div className="mail-labels">
@@ -146,7 +146,8 @@ function SenderCard({ sender }: { sender: string }) {
       {recent && (
         <div className="mail-card-line">
           최근 {recent.windowDays}일 {recent.count}
-          {recent.truncated ? "+" : ""}건{recent.lastReceivedAt ? ` · 마지막 ${fmtDate(recent.lastReceivedAt)}` : ""}
+          {recent.truncated ? "+" : ""}건
+          {recent.lastReceivedAt ? ` · 마지막 ${fmtMailDate(recent.lastReceivedAt)}` : ""}
         </div>
       )}
       {hits.length > 0 && (

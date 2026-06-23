@@ -4,7 +4,7 @@ import { serializeList } from "@/aiText";
 import { useCachedList, useCachedOne } from "@/cachedList";
 import { MAIL_RPC } from "@/resources";
 import { color, ellipsis } from "@/theme";
-import { fmtDate, text } from "@/format";
+import { fmtMailDate, text } from "@/format";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
@@ -26,18 +26,17 @@ export function MailPane() {
     consumePaneTarget();
   }, [consumePaneTarget, paneTarget]);
 
-  // Mirror the grid (subject · sender · date + snippet) so the AI sees what the user sees.
+  // Mirror the grid (subject · sender · date) so the AI sees what the user sees.
   const listText = serializeList("메일", mails, (m) => {
     const who = text(m.from);
-    const head = `- ${m.isUnread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}${
-      m.date ? ` · ${fmtDate(m.date)}` : ""
+    return `- ${m.isUnread ? "● " : ""}${m.subject ?? "(제목 없음)"}${who ? ` · ${who}` : ""}${
+      m.date ? ` · ${fmtMailDate(m.date)}` : ""
     }`;
-    return m.snippet ? `${head}\n    ${m.snippet}` : head;
   });
   const detailBody = mailBody(selectedMail);
   const detailText = selectedMail
     ? `[선택한 메일]\n제목: ${selectedMail.subject ?? "(제목 없음)"}\n보낸이: ${text(selectedMail.from) || "—"}${
-        selectedMail.date ? `\n날짜: ${fmtDate(selectedMail.date)}` : ""
+        selectedMail.date ? `\n날짜: ${fmtMailDate(selectedMail.date)}` : ""
       }\n\n${detailBody}`
     : "";
   const aiText = [listText, detailText].filter(Boolean).join("\n\n");
@@ -70,18 +69,13 @@ export function MailPane() {
     },
     {
       header: "제목",
-      cell: (m) => (
-        <>
-          <div>{m.subject ?? "(제목 없음)"}</div>
-          {m.snippet && <div style={{ fontSize: 12, color: "var(--muted-2)", ...ellipsis(520) }}>{m.snippet}</div>}
-        </>
-      ),
+      cell: (m) => m.subject ?? "(제목 없음)",
     },
     {
       header: "날짜",
       width: 116,
       tdStyle: { fontSize: 13, opacity: 0.7, whiteSpace: "nowrap" },
-      cell: (m) => fmtDate(m.date),
+      cell: (m) => fmtMailDate(m.date),
     },
     {
       header: "",

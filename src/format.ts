@@ -35,7 +35,30 @@ export function fmtDate(v?: string | number): string {
   if (v == null || v === "") return "";
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return String(v);
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+// Mail timestamps within the last 6 hours read relatively ("3시간 전" / "45분 전" /
+// "방금"); older or future ones fall back to the absolute fmtDate. `now` is injectable
+// for deterministic tests.
+export function fmtMailDate(v?: string | number, now = Date.now()): string {
+  if (v == null || v === "") return "";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return String(v);
+  const diff = now - d.getTime();
+  if (diff >= 0 && diff < 6 * 60 * 60 * 1000) {
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 1) return "방금";
+    if (mins < 60) return `${mins}분 전`;
+    return `${Math.floor(mins / 60)}시간 전`;
+  }
+  return fmtDate(v);
 }
 
 // A calendar timestamp is a bare ISO string or a { dateTime } / { date } object.
@@ -85,7 +108,9 @@ export function hhmm(v: CalTimestamp | undefined): string {
   const s = calStamp(v);
   if (!s.iso || s.allDay) return "";
   const d = new Date(s.iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 // Localized "year month" heading, e.g. "2026년 6월" / "June 2026". month0 is 0-based.

@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { calSpan, calStamp, dayKey, errText, eventDayKeys, eventEndMs, fmtDate, monthMatrix, text } from "./format";
+import {
+  calSpan,
+  calStamp,
+  dayKey,
+  errText,
+  eventDayKeys,
+  eventEndMs,
+  fmtDate,
+  fmtMailDate,
+  monthMatrix,
+  text,
+} from "./format";
 
 describe("text", () => {
   it("returns strings as-is", () => {
@@ -23,6 +34,31 @@ describe("fmtDate", () => {
   });
   it("passes through unparseable input", () => {
     expect(fmtDate("not a date")).toBe("not a date");
+  });
+});
+
+describe("fmtMailDate", () => {
+  const now = new Date("2026-06-23T12:00:00Z").getTime();
+  it("shows '방금' under a minute", () => {
+    expect(fmtMailDate(new Date(now - 30_000).toISOString(), now)).toBe("방금");
+  });
+  it("shows minutes under an hour", () => {
+    expect(fmtMailDate(new Date(now - 45 * 60_000).toISOString(), now)).toBe("45분 전");
+  });
+  it("shows hours within six hours", () => {
+    expect(fmtMailDate(new Date(now - 3 * 3_600_000).toISOString(), now)).toBe("3시간 전");
+  });
+  it("falls back to the absolute date at/after six hours", () => {
+    const v = new Date(now - 6 * 3_600_000).toISOString();
+    expect(fmtMailDate(v, now)).toBe(fmtDate(v));
+  });
+  it("falls back to the absolute date for future timestamps", () => {
+    const v = new Date(now + 3_600_000).toISOString();
+    expect(fmtMailDate(v, now)).toBe(fmtDate(v));
+  });
+  it("passes through empty and unparseable input", () => {
+    expect(fmtMailDate(undefined, now)).toBe("");
+    expect(fmtMailDate("not a date", now)).toBe("not a date");
   });
 });
 
