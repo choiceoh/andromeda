@@ -171,7 +171,6 @@ export function WikiPane() {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             disabled={!path}
-            placeholder={path ? "" : "왼쪽에서 페이지를 선택하면 편집할 수 있습니다."}
             className="field"
             style={{
               flex: 1,
@@ -220,9 +219,6 @@ function NewPageModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p
           }}
         />
       </Field>
-      <p style={{ fontSize: 12, color: "var(--muted-2)", margin: 0 }}>
-        슬래시로 분류를 나눕니다. 생성 후 바로 편집할 수 있습니다.
-      </p>
     </Modal>
   );
 }

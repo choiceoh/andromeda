@@ -59,7 +59,7 @@ describe("CalendarPane (일정 달력)", () => {
 
   it("shows a connect notice and no calendar when disconnected", () => {
     renderWithProviders(<CalendarPane />, { connected: false });
-    expect(screen.getByText(/게이트웨이에 연결하면/)).toBeInTheDocument();
+    expect(screen.getByText(/미연결/)).toBeInTheDocument();
     // weekday headers only exist when the grid renders (connected)
     expect(screen.queryByText("일")).not.toBeInTheDocument();
   });

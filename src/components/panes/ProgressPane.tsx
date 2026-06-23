@@ -26,9 +26,6 @@ export function ProgressPane() {
   return (
     <>
       <h2 style={{ marginTop: 2 }}>프로젝트 진행상황</h2>
-      <p style={{ color: "var(--muted-2)", fontSize: 12, margin: "6px 0 16px", lineHeight: 1.5 }}>
-        프로젝트별 최신 진행을 한눈에 — 데네브에게 “어느 프로젝트부터 챙길까?”라고 물어보세요.
-      </p>
       <GridNotice query={query} count={digests.length} empty="진행 중인 프로젝트가 없습니다.">
         <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 720 }}>
           {digests.map((d, i) => (

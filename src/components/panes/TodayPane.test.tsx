@@ -66,6 +66,6 @@ describe("TodayPane (오늘 대시보드)", () => {
 
   it("shows a single connect notice when disconnected", () => {
     renderWithProviders(<TodayPane />, { connected: false });
-    expect(screen.getAllByText(/게이트웨이에 연결하면/)).toHaveLength(1);
+    expect(screen.getAllByText(/미연결/)).toHaveLength(1);
   });
 });

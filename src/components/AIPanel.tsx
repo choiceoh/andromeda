@@ -198,10 +198,6 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
 
       <ProactivePanel cfg={cfg} />
 
-      <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 9, lineHeight: 1.5 }}>
-        현재 뷰({currentPane})를 읽는 중 · 도구로 바꾸면 즉시 반영됩니다
-      </div>
-
       <div className="ai-quick-actions" aria-label="빠른 지시">
         {quickActions.map((action) => (
           <button
@@ -227,9 +223,9 @@ export function AIPanel({ cfg }: { cfg: GatewayConfig }) {
         }}
       >
         {turns.length === 0 ? (
-          <div className="ai-empty">
-            {connected ? "메시지를 보내면 대화가 여기에 쌓입니다." : "게이트웨이 연결 대기 중"}
-          </div>
+          connected ? null : (
+            <div className="ai-empty">게이트웨이 연결 대기 중</div>
+          )
         ) : (
           turns.map((turn) => (
             <div key={turn.id} className={`ai-turn ${turn.role} ${turn.status}`}>
