@@ -19,12 +19,16 @@ export function Grid<T>({
   getKey,
   maxWidth,
   rowStyle,
+  onRowClick,
 }: {
   columns: Column<T>[];
   rows: T[];
   getKey: (row: T) => string;
   maxWidth?: number;
   rowStyle?: (row: T) => CSSProperties;
+  // When set, rows become clickable (open a detail/edit modal). Action buttons in a
+  // cell should wrap themselves in a stopPropagation span so they don't also fire this.
+  onRowClick?: (row: T) => void;
 }) {
   return (
     <table className="dgrid" style={{ maxWidth }}>
@@ -39,7 +43,11 @@ export function Grid<T>({
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={getKey(row)} style={rowStyle?.(row)}>
+          <tr
+            key={getKey(row)}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
+            style={{ ...(onRowClick ? { cursor: "pointer" } : null), ...rowStyle?.(row) }}
+          >
             {columns.map((c, i) => (
               <td key={i} style={c.tdStyle}>
                 {c.cell(row)}
@@ -50,6 +58,12 @@ export function Grid<T>({
       </tbody>
     </table>
   );
+}
+
+// Wrap row-action buttons so a click on them doesn't also trigger the row's
+// onRowClick (open-detail). Use inside a clickable grid's action cell.
+export function StopClick({ children }: { children: ReactNode }) {
+  return <span onClick={(e) => e.stopPropagation()}>{children}</span>;
 }
 
 // Renders a notice (and nothing else) when the grid can't show rows yet; checks
