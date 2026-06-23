@@ -1859,6 +1859,72 @@ textarea {
   gap: 0 18px;
 }
 
+/* 설정 — the active tab's panel: a quick, restrained fade-in on switch (snappier
+   than the 0.45s .fade-up entrance, which feels sluggish for a tab toggle). */
+.settings-panel {
+  animation: settingsIn 0.18s var(--ease) both;
+}
+@keyframes settingsIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 설정 — a reorderable rail row (좌측 탭). The whole row lights up on hover so the
+   checkbox + ▲▼ read as one interactive unit. */
+.settings-rail-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  transition: background 0.12s var(--ease);
+}
+.settings-rail-row:hover {
+  background: var(--panel-sunken);
+}
+.settings-rail-row > label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+
+/* single-choice pill (로그 레벨) — outlined at rest, accent when chosen. Distinct
+   from the segmented section tabs above, and (unlike the old inline version) it
+   now responds to hover. */
+.opt {
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--ink-2);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: var(--radius-ctl);
+  cursor: pointer;
+  transition:
+    background 0.13s var(--ease),
+    border-color 0.13s var(--ease),
+    color 0.13s var(--ease);
+}
+.opt:hover:not(.active) {
+  background: var(--panel-sunken);
+  border-color: var(--muted-2);
+}
+.opt.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
 /* deneb-ui — agent-drawn interactive UI inside a chat reply */
 .dui {
   display: flex;

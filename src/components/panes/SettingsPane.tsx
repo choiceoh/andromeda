@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { saveConfig } from "@/gateway";
 import { setString } from "@/storage";
 import { useGatewayStatus } from "@/hooks";
@@ -69,6 +69,22 @@ export function SettingsPane() {
 
   const isError = status.startsWith("오류");
 
+  // WAI-ARIA tabs: ←/→ wrap, Home/End jump; selection follows focus (roving
+  // tabindex below keeps only the active tab in the page tab order).
+  function onTabKey(e: KeyboardEvent, idx: number) {
+    const last = TABS.length - 1;
+    let next = idx;
+    if (e.key === "ArrowRight") next = idx === last ? 0 : idx + 1;
+    else if (e.key === "ArrowLeft") next = idx === 0 ? last : idx - 1;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = last;
+    else return;
+    e.preventDefault();
+    const key = TABS[next].key;
+    setTab(key);
+    document.getElementById(`settings-tab-${key}`)?.focus();
+  }
+
   // Reorderable rail list (non-settings panes); ▲▼ swap a pane with its neighbour.
   const railOrder = orderedViews(viewOrder);
   function moveView(key: View, dir: -1 | 1) {
@@ -85,7 +101,7 @@ export function SettingsPane() {
       <h2 style={{ marginTop: 2 }}>설정</h2>
 
       <div className="settings-tabs" role="tablist" aria-label="설정 섹션">
-        {TABS.map((t) => (
+        {TABS.map((t, i) => (
           <button
             key={t.key}
             type="button"
@@ -93,8 +109,10 @@ export function SettingsPane() {
             id={`settings-tab-${t.key}`}
             aria-selected={tab === t.key}
             aria-controls="settings-panel"
+            tabIndex={tab === t.key ? 0 : -1}
             className={"settings-tab" + (tab === t.key ? " active" : "")}
             onClick={() => setTab(t.key)}
+            onKeyDown={(e) => onTabKey(e, i)}
           >
             {t.label}
           </button>
@@ -102,7 +120,13 @@ export function SettingsPane() {
       </div>
 
       {/* key={tab} remounts the panel so it re-runs the fade on each switch */}
-      <div key={tab} id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${tab}`} className="fade-up">
+      <div
+        key={tab}
+        id="settings-panel"
+        role="tabpanel"
+        aria-labelledby={`settings-tab-${tab}`}
+        className="settings-panel"
+      >
         {tab === "connection" && (
           <Section title="게이트웨이 연결">
             <div className="settings-fields">
@@ -155,20 +179,8 @@ export function SettingsPane() {
                   const p = PANES.find((x) => x.key === key);
                   if (!p) return null;
                   return (
-                    <div
-                      key={key}
-                      style={{ display: "flex", alignItems: "center", gap: 9, padding: "3px 4px", fontSize: 13 }}
-                    >
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 9,
-                          flex: 1,
-                          cursor: "pointer",
-                          color: "var(--ink-2)",
-                        }}
-                      >
+                    <div key={key} className="settings-rail-row">
+                      <label>
                         <input
                           type="checkbox"
                           checked={!hiddenViews.includes(key)}
@@ -207,17 +219,10 @@ export function SettingsPane() {
                   return (
                     <button
                       key={l}
+                      type="button"
+                      className={"opt" + (active ? " active" : "")}
                       onClick={() => applyLevel(l)}
                       aria-pressed={active}
-                      style={{
-                        padding: "6px 12px",
-                        fontSize: 13,
-                        borderRadius: "var(--radius-ctl)",
-                        cursor: "pointer",
-                        border: active ? "1px solid var(--accent)" : "1px solid var(--line-2)",
-                        background: active ? "var(--accent-soft)" : "var(--panel)",
-                        color: active ? "var(--accent-deep)" : "var(--ink-2)",
-                      }}
                     >
                       {LOG_LABEL[l]}
                     </button>

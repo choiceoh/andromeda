@@ -30,6 +30,23 @@ describe("SettingsPane (설정)", () => {
     expect(screen.getByRole("tab", { name: "정보" })).toHaveAttribute("aria-selected", "true");
   });
 
+  it("navigates tabs with the keyboard (arrows wrap, Home jumps) and roves tabindex", () => {
+    renderWithProviders(<SettingsPane />, { connected: false });
+    // Roving tabindex: only the active tab is in the page tab order.
+    expect(screen.getByRole("tab", { name: "연결" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: "정보" })).toHaveAttribute("tabindex", "-1");
+
+    // ArrowLeft from the first tab wraps to the last (정보).
+    fireEvent.keyDown(screen.getByRole("tab", { name: "연결" }), { key: "ArrowLeft" });
+    expect(screen.getByRole("tab", { name: "정보" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText(/v\d+\.\d+\.\d+/)).toBeInTheDocument();
+
+    // Home jumps back to the first tab and its content.
+    fireEvent.keyDown(screen.getByRole("tab", { name: "정보" }), { key: "Home" });
+    expect(screen.getByRole("tab", { name: "연결" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("게이트웨이 연결")).toBeInTheDocument();
+  });
+
   it("hides a nav tab via the 좌측 탭 toggles on the 일반 tab and keeps the reorder controls", () => {
     renderWithProviders(<SettingsPane />, { connected: false });
     fireEvent.click(screen.getByRole("tab", { name: "일반" }));
