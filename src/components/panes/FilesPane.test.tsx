@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { FILES_RPC } from "@/resources";
+import { cachedRpcStorageKey, rpcCacheKey } from "@/rpcCache";
 import type { FileEntry } from "@/types";
 import { renderWithProviders } from "@/test/util";
 import { FilesPane } from "./FilesPane";
@@ -17,6 +19,7 @@ const projectEntries: FileEntry[] = [
 ];
 
 beforeEach(() => {
+  localStorage.clear();
   if (!globalThis.crypto?.randomUUID) {
     vi.stubGlobal("crypto", { randomUUID: () => "test-uuid" });
   }
@@ -44,10 +47,29 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  localStorage.clear();
   vi.unstubAllGlobals();
 });
 
 describe("FilesPane", () => {
+  it("hydrates the root folder from cache before the gateway refresh finishes", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    localStorage.setItem(
+      cachedRpcStorageKey("files", rpcCacheKey(FILES_RPC.list, { path: "", limit: 300 })),
+      JSON.stringify({
+        data: { entries: [{ tag: "file", name: "cached-contract.pdf", pathDisplay: "cached-contract.pdf" }], path: "" },
+        savedAt: Date.now(),
+      }),
+    );
+
+    renderWithProviders(<FilesPane />, { connected: true });
+
+    expect(screen.getAllByText("cached-contract.pdf")[0]).toBeInTheDocument();
+  });
+
   it("lists folders and drills into a selected folder", async () => {
     renderWithProviders(<FilesPane />, { connected: true });
 

@@ -5,6 +5,7 @@ import { renderWithProviders } from "@/test/util";
 import { NotebookPane } from "./NotebookPane";
 
 beforeEach(() => {
+  localStorage.clear();
   if (!globalThis.crypto?.randomUUID) {
     vi.stubGlobal("crypto", { randomUUID: () => "test-uuid" });
   }
@@ -33,6 +34,7 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  localStorage.clear();
   vi.unstubAllGlobals();
 });
 
