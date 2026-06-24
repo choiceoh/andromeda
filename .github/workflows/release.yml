@@ -30,8 +30,9 @@ name: Release
 # To enable OS signing/notarization later, set the secrets in the commented block below.
 
 on:
-  push:
-    branches: [main]
+  # ⚠️ 이 레포는 Deneb 모노레포(Deneb/andromeda)로 이관·동결됨 (2026-06-24).
+  # 자동 릴리즈 비활성화 — andromeda 릴리즈는 이제 Deneb의 release-please가 담당.
+  # 개발은 https://github.com/choiceoh/Deneb 의 andromeda/ 에서. 수동 실행만 비상용으로 남김.
   workflow_dispatch:
 
 # release-please needs to open PRs and create releases/tags; tauri-action uploads assets.
