@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { WorkItem } from "@/types";
 import { serializeList } from "@/aiText";
 import { useCachedList } from "@/cachedList";
+import { chatStream } from "@/gateway";
 import { WORKFEED_RPC } from "@/resources";
 import { fmtDate } from "@/format";
 import { usePaneTarget } from "@/usePaneTarget";
@@ -9,18 +10,42 @@ import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
 
-// Items sourced from a question expect a free-text reply, surfaced as an inline
-// box (sent via workfeed.feedback — the gateway records it and runs a turn).
+// Items sourced from a question expect a free-text reply. The gateway settles the
+// card via workfeed.answer/action.run, then returns a sessionKey+prompt to deliver.
 const isQuestion = (w: WorkItem) => (w.source ?? "").includes("question");
 
-type RunFn = (method: string, params?: Record<string, unknown>) => void;
+type RunFn = (method: string, params?: Record<string, unknown>) => Promise<unknown>;
+
+interface WorkfeedTurn {
+  sessionKey?: string;
+  prompt?: string;
+}
 
 export function WorkfeedPane() {
-  const { connected } = useWorkspace();
+  const { connected, cfg } = useWorkspace();
   const { result, query } = useCachedList<WorkItem>("workfeed", connected);
   const items = result?.data ?? [];
   const [selectedId, setSelectedId] = useState<string | number | undefined>();
-  const { run, error, busy } = useAction(() => void query.refetch());
+  const { run, error, busy } = useAction(() => void query.refetch(), {
+    onResult: async (data) => {
+      const turn = data as WorkfeedTurn;
+      const sessionKey = typeof turn?.sessionKey === "string" ? turn.sessionKey.trim() : "";
+      const prompt = typeof turn?.prompt === "string" ? turn.prompt.trim() : "";
+      if (!sessionKey || !prompt) return;
+      let streamError = "";
+      await chatStream(
+        cfg,
+        prompt,
+        {
+          onError: (err) => {
+            streamError = err;
+          },
+        },
+        { sessionKey },
+      );
+      if (streamError) throw new Error(streamError);
+    },
+  });
 
   usePaneTarget("workfeed", setSelectedId);
 
@@ -59,7 +84,7 @@ export function WorkfeedPane() {
       width: 60,
       tdStyle: { textAlign: "right" },
       cell: (w) => (
-        <RowBtn onClick={() => run(WORKFEED_RPC.ack, { id: w.id })} disabled={busy} title="처리(닫기)">
+        <RowBtn onClick={() => void run(WORKFEED_RPC.ack, { id: w.id })} disabled={busy} title="처리(닫기)">
           처리
         </RowBtn>
       ),
@@ -82,49 +107,44 @@ export function WorkfeedPane() {
   );
 }
 
-// Per-item actions: the card's own action chips (action.run), regenerate the
-// card (rewrite), and a free-text feedback/answer box (feedback). Question items
-// show the box by default; other cards reveal it behind a 정정 toggle.
+// Per-item actions mirror the gateway: fixed chips go through action.run, and
+// question cards expose a free-text answer box via workfeed.answer.
 function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: RunFn }) {
   const question = isQuestion(w);
-  const [open, setOpen] = useState(question);
   const [text, setText] = useState("");
+  const hasActions = (w.actions?.length ?? 0) > 0;
 
   const submit = () => {
     const t = text.trim();
     if (!t) return;
     setText("");
-    run(WORKFEED_RPC.feedback, { itemId: w.id, feedback: t });
+    void run(WORKFEED_RPC.answer, { itemId: w.id, answer: t });
   };
+
+  if (!hasActions && !question) return null;
 
   return (
     <>
-      <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
-        {w.actions?.map((a) => (
-          <button
-            key={a.id}
-            className="chip"
-            disabled={busy}
-            onClick={() => run(WORKFEED_RPC.actionRun, { itemId: w.id, actionId: a.id })}
-          >
-            {a.label}
-          </button>
-        ))}
-        <RowBtn onClick={() => run(WORKFEED_RPC.rewrite, { itemId: w.id })} disabled={busy} title="카드 다시 작성">
-          다시 작성
-        </RowBtn>
-        {!question && (
-          <RowBtn onClick={() => setOpen((o) => !o)} disabled={busy} title="정정·피드백 남기기">
-            정정
-          </RowBtn>
-        )}
-      </div>
-      {open && (
+      {hasActions && (
+        <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
+          {w.actions?.map((a) => (
+            <button
+              key={a.id}
+              className="chip"
+              disabled={busy}
+              onClick={() => void run(WORKFEED_RPC.actionRun, { itemId: w.id, actionId: a.id })}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {question && (
         <div style={{ display: "flex", gap: 5, marginTop: 6, maxWidth: 460 }}>
           <input
             className="field"
             style={{ flex: 1, fontSize: 12, padding: "5px 8px" }}
-            placeholder={question ? "답변 입력…" : "정정·피드백 입력…"}
+            placeholder="답변 입력…"
             value={text}
             disabled={busy}
             onChange={(e) => setText(e.target.value)}
@@ -133,7 +153,7 @@ function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: Ru
             }}
           />
           <button className="chip" onClick={submit} disabled={busy || !text.trim()}>
-            {question ? "답변" : "보내기"}
+            답변
           </button>
         </div>
       )}

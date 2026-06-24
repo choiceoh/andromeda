@@ -5,18 +5,52 @@ import { fakeProvider, renderWithProviders } from "@/test/util";
 import { WorkfeedPane } from "./WorkfeedPane";
 
 // The list flows through the (fake) data provider; the action RPCs go straight to
-// callRpc → fetch. Stub fetch to capture the last RPC method + params.
-let lastRpc: { method: string; params: Record<string, unknown> } | null;
+// callRpc → fetch. Stub fetch to capture RPCs and follow-up chat stream deliveries.
+let rpcCalls: Array<{ method: string; params: Record<string, unknown> }>;
+let chatCalls: Array<{ message: string; sessionKey: string }>;
+
+interface CapturedBody {
+  method?: string;
+  params?: Record<string, unknown>;
+  message?: string;
+  sessionKey?: string;
+}
+
+function sseResponse(body = 'event: done\ndata: {"text":"ok"}\n\n'): Response {
+  const enc = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(enc.encode(body));
+      controller.close();
+    },
+  });
+  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
 
 beforeEach(() => {
-  lastRpc = null;
+  rpcCalls = [];
+  chatCalls = [];
   if (!globalThis.crypto?.randomUUID) vi.stubGlobal("crypto", { randomUUID: () => "test-uuid" });
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body ?? "{}")) as { method: string; params: Record<string, unknown> };
-      lastRpc = { method: body.method, params: body.params };
-      return { ok: true, json: async () => ({ ok: true, payload: { ok: true } }) } as unknown as Response;
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as CapturedBody;
+      const params = body.params ?? {};
+      if (String(url).includes("/chat/stream")) {
+        chatCalls.push({ message: String(body.message ?? ""), sessionKey: String(body.sessionKey ?? "") });
+        return sseResponse();
+      }
+      rpcCalls.push({ method: String(body.method ?? ""), params });
+      const payload =
+        body.method === "miniapp.workfeed.answer"
+          ? { ok: true, sessionKey: "client:main", prompt: params.answer, removeFromFeed: true }
+          : body.method === "miniapp.workfeed.action.run"
+            ? { ok: true, sessionKey: "client:main", prompt: "후속 액션 실행", removeFromFeed: true }
+            : { ok: true };
+      return new Response(JSON.stringify({ ok: true, payload }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }),
   );
 });
@@ -26,7 +60,7 @@ afterEach(() => {
 });
 
 describe("WorkfeedPane", () => {
-  it("answers a question item via workfeed.feedback", async () => {
+  it("answers a question item via workfeed.answer and delivers the returned prompt", async () => {
     const dataProvider = fakeProvider({
       workfeed: [{ id: "w1", source: "deal_question", title: "검토 요청", body: "승인 여부를 알려주세요." }],
     });
@@ -36,42 +70,37 @@ describe("WorkfeedPane", () => {
     await userEvent.type(box, "승인합니다");
     await userEvent.click(screen.getByRole("button", { name: "답변" }));
 
-    await waitFor(() => expect(lastRpc).toBeTruthy());
-    expect(lastRpc?.method).toBe("miniapp.workfeed.feedback");
-    expect(lastRpc?.params).toMatchObject({ itemId: "w1", feedback: "승인합니다" });
+    await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.answer")).toBe(true));
+    const answer = rpcCalls.find((c) => c.method === "miniapp.workfeed.answer");
+    expect(answer?.params).toMatchObject({ itemId: "w1", answer: "승인합니다" });
+    await waitFor(() => expect(chatCalls).toHaveLength(1));
+    expect(chatCalls[0]).toMatchObject({ message: "승인합니다", sessionKey: "client:main" });
   });
 
-  it("regenerates a card via workfeed.rewrite", async () => {
+  it("runs fixed action chips via action.run and delivers the returned prompt", async () => {
+    const dataProvider = fakeProvider({
+      workfeed: [{ id: "w2", source: "followup", title: "미답장 메일 3건", actions: [{ id: "reply", label: "답장" }] }],
+    });
+    renderWithProviders(<WorkfeedPane />, { connected: true, dataProvider });
+
+    await userEvent.click(await screen.findByRole("button", { name: "답장" }));
+
+    await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.action.run")).toBe(true));
+    const action = rpcCalls.find((c) => c.method === "miniapp.workfeed.action.run");
+    expect(action?.params).toMatchObject({ itemId: "w2", actionId: "reply" });
+    await waitFor(() => expect(chatCalls[0]).toMatchObject({ message: "후속 액션 실행", sessionKey: "client:main" }));
+  });
+
+  it("does not render unsupported rewrite/correction controls for non-question items", async () => {
     const dataProvider = fakeProvider({
       workfeed: [{ id: "w2", source: "followup", title: "미답장 메일 3건" }],
     });
     renderWithProviders(<WorkfeedPane />, { connected: true, dataProvider });
 
-    await userEvent.click(await screen.findByRole("button", { name: "다시 작성" }));
-
-    await waitFor(() => expect(lastRpc).toBeTruthy());
-    expect(lastRpc?.method).toBe("miniapp.workfeed.rewrite");
-    expect(lastRpc?.params).toMatchObject({ itemId: "w2" });
-  });
-
-  it("reveals a correction box behind 정정 for non-question items", async () => {
-    const dataProvider = fakeProvider({
-      workfeed: [{ id: "w2", source: "followup", title: "미답장 메일 3건" }],
-    });
-    renderWithProviders(<WorkfeedPane />, { connected: true, dataProvider });
-
-    // A non-question item shows no free-text box until 정정 is toggled.
     expect(await screen.findByText("미답장 메일 3건")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("답변 입력…")).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("정정·피드백 입력…")).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "정정" }));
-    const box = await screen.findByPlaceholderText("정정·피드백 입력…");
-    await userEvent.type(box, "이미 답장함");
-    await userEvent.click(screen.getByRole("button", { name: "보내기" }));
-
-    await waitFor(() => expect(lastRpc).toBeTruthy());
-    expect(lastRpc?.method).toBe("miniapp.workfeed.feedback");
-    expect(lastRpc?.params).toMatchObject({ itemId: "w2", feedback: "이미 답장함" });
+    expect(screen.queryByRole("button", { name: "다시 작성" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "정정" })).not.toBeInTheDocument();
   });
 });

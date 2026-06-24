@@ -128,12 +128,22 @@ function TodoModal({ todo, onClose, onSaved }: { todo: Todo | null; onClose: () 
       onError: (e: unknown) => setStatus(`오류: ${errText(e)}`),
     };
     if (todo) {
-      // due as a date-only string (cleared with ""); best-effort vs the live gateway.
-      updateTodo({ resource: "todo", id: todo.id, values: { title: t, due, note: note.trim() } }, handlers);
+      const dueValue = due ? dateOnlyToRpcDue(due) : "";
+      updateTodo(
+        {
+          resource: "todo",
+          id: todo.id,
+          values: { title: t, due: dueValue, dueAllDay: Boolean(due), note: note.trim() },
+        },
+        handlers,
+      );
     } else {
       // A fresh todo only carries what was filled in (mirrors the old quick-add).
-      const values: Record<string, string> = { title: t };
-      if (due) values.due = due;
+      const values: Record<string, string | boolean> = { title: t };
+      if (due) {
+        values.due = dateOnlyToRpcDue(due);
+        values.dueAllDay = true;
+      }
       if (note.trim()) values.note = note.trim();
       createTodo({ resource: "todo", values }, handlers);
     }
@@ -162,4 +172,9 @@ function TodoModal({ todo, onClose, onSaved }: { todo: Todo | null; onClose: () 
       </Field>
     </Modal>
   );
+}
+
+function dateOnlyToRpcDue(ymd: string): string {
+  const d = new Date(`${ymd}T00:00`);
+  return Number.isNaN(d.getTime()) ? ymd : d.toISOString();
 }

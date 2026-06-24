@@ -254,7 +254,7 @@ function AnalysisCard({ mailId }: { mailId: string }) {
     }
   }
 
-  const analysis = data?.cached && data.analysis?.trim() ? data.analysis : "";
+  const analysis = data?.analysis?.trim() ? data.analysis : "";
   const importance = data?.analysisQuality?.trim();
 
   return (
