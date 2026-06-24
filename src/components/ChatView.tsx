@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { type GatewayConfig, type ModelsList, listModels } from "@/gateway";
 import { useChat } from "@/hooks";
@@ -18,9 +18,10 @@ import { SessionDrawer } from "./SessionDrawer";
 // 컬럼(가독성을 위해 메시지를 좁게 가운데 정렬) + 우측 세션 목록.
 export function ChatView({ cfg, hidden = false }: { cfg: GatewayConfig; hidden?: boolean }) {
   const { connected } = useWorkspace();
-  const { thinking, busy, turns, send, stop, regenerate, clear, setTurns } = useChat(cfg);
+  const { thinking, busy, turns, send, capture, stop, regenerate, clear, setTurns } = useChat(cfg);
   const [input, setInput] = useState("");
   const composeRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [models, setModels] = useState<ModelsList | null>(null);
   const [model, setModel] = useState("");
   // chat:* 네임스페이스로 스코프 — 업무 패널의 client:main 세션과 섞이지 않는다.
@@ -81,6 +82,20 @@ export function ChatView({ cfg, hidden = false }: { cfg: GatewayConfig; hidden?:
     // refresh the history once the turn finishes — the gateway may have created or
     // relabelled this chat:* session.
     void send(msg, { model: model || undefined, sessionKey }).then(() => void refreshSessions());
+  }
+
+  // 첨부: 파일을 base64로 읽어 capture(이미지 OCR·음성 전사·문서 추출)로 보낸다.
+  function onPick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // let the same file be picked again later
+    if (!file || busy || !connected) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = String(reader.result).split(",")[1] ?? "";
+      pin();
+      void capture({ name: file.name, mimeType: file.type, base64 }, { sessionKey }).then(() => void refreshSessions());
+    };
+    reader.readAsDataURL(file);
   }
 
   const last = turns.at(-1);
@@ -148,6 +163,24 @@ export function ChatView({ cfg, hidden = false }: { cfg: GatewayConfig; hidden?:
             submit();
           }}
         >
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt"
+            hidden
+            onChange={onPick}
+          />
+          <button
+            type="button"
+            className="row-btn"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy || !connected}
+            title="파일 첨부 (이미지·문서·녹음)"
+            aria-label="파일 첨부"
+            style={{ padding: 5, alignSelf: "flex-end" }}
+          >
+            <Icon name="attach" size={18} />
+          </button>
           <textarea
             ref={composeRef}
             className="ai-compose"

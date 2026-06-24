@@ -40,4 +40,9 @@ describe("ChatView (비업무 채팅 탭)", () => {
     renderWithProviders(<ChatView cfg={{ url: "http://test", token: "tok" }} />, { connected: true });
     expect(screen.getByRole("textbox", { name: "Deneb에게 메시지" })).toHaveFocus();
   });
+
+  it("offers a file-attach button (image OCR · document · audio)", () => {
+    renderWithProviders(<ChatView cfg={{ url: "http://test", token: "tok" }} />, { connected: true });
+    expect(screen.getByRole("button", { name: "파일 첨부" })).toBeInTheDocument();
+  });
 });
