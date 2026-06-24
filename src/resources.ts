@@ -131,6 +131,8 @@ export const WORKFEED_RPC = {
   ack: "miniapp.workfeed.ack",
   actionRun: "miniapp.workfeed.action.run",
   answer: "miniapp.workfeed.answer",
+  feedback: "miniapp.workfeed.feedback",
+  rewrite: "miniapp.workfeed.rewrite",
 } as const;
 
 export const RESOURCE_MAP: Record<string, ResourceDef> = Object.fromEntries(RESOURCE_DEFS.map((r) => [r.name, r]));

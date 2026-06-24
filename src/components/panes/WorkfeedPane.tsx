@@ -107,11 +107,12 @@ export function WorkfeedPane() {
   );
 }
 
-// Per-item actions mirror the gateway: fixed chips go through action.run, and
-// question cards expose a free-text answer box via workfeed.answer.
+// Per-item actions mirror the gateway: fixed chips go through action.run, question
+// cards expose workfeed.answer, and every card can be corrected or regenerated.
 function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: RunFn }) {
   const question = isQuestion(w);
   const [text, setText] = useState("");
+  const [feedback, setFeedback] = useState("");
   const hasActions = (w.actions?.length ?? 0) > 0;
 
   const submit = () => {
@@ -121,7 +122,12 @@ function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: Ru
     void run(WORKFEED_RPC.answer, { itemId: w.id, answer: t });
   };
 
-  if (!hasActions && !question) return null;
+  const submitFeedback = () => {
+    const t = feedback.trim();
+    if (!t) return;
+    setFeedback("");
+    void run(WORKFEED_RPC.feedback, { itemId: w.id, feedback: t });
+  };
 
   return (
     <>
@@ -157,6 +163,32 @@ function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: Ru
           </button>
         </div>
       )}
+      <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
+        <button
+          className="chip"
+          disabled={busy}
+          onClick={() => void run(WORKFEED_RPC.rewrite, { itemId: w.id })}
+          title="카드 분석 다시 작성"
+        >
+          다시 작성
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 5, marginTop: 6, maxWidth: 520 }}>
+        <input
+          className="field"
+          style={{ flex: 1, fontSize: 12, padding: "5px 8px" }}
+          placeholder="정정·피드백 입력…"
+          value={feedback}
+          disabled={busy}
+          onChange={(e) => setFeedback(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submitFeedback();
+          }}
+        />
+        <button className="chip" onClick={submitFeedback} disabled={busy || !feedback.trim()}>
+          정정
+        </button>
+      </div>
     </>
   );
 }

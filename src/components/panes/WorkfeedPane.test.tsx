@@ -91,7 +91,7 @@ describe("WorkfeedPane", () => {
     await waitFor(() => expect(chatCalls[0]).toMatchObject({ message: "후속 액션 실행", sessionKey: "client:main" }));
   });
 
-  it("does not render unsupported rewrite/correction controls for non-question items", async () => {
+  it("corrects and rewrites any workfeed card through the bridge RPCs", async () => {
     const dataProvider = fakeProvider({
       workfeed: [{ id: "w2", source: "followup", title: "미답장 메일 3건" }],
     });
@@ -99,8 +99,17 @@ describe("WorkfeedPane", () => {
 
     expect(await screen.findByText("미답장 메일 3건")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("답변 입력…")).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("정정·피드백 입력…")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "다시 작성" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "정정" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "다시 작성" }));
+    await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.rewrite")).toBe(true));
+    expect(rpcCalls.find((c) => c.method === "miniapp.workfeed.rewrite")?.params).toMatchObject({ itemId: "w2" });
+
+    await userEvent.type(screen.getByPlaceholderText("정정·피드백 입력…"), "이 메일은 이미 처리됐습니다");
+    await userEvent.click(screen.getByRole("button", { name: "정정" }));
+
+    await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.feedback")).toBe(true));
+    expect(rpcCalls.find((c) => c.method === "miniapp.workfeed.feedback")?.params).toMatchObject({
+      itemId: "w2",
+      feedback: "이 메일은 이미 처리됐습니다",
+    });
   });
 });
