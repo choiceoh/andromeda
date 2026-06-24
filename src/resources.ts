@@ -130,11 +130,7 @@ export const CRON_RPC = {
 export const WORKFEED_RPC = {
   ack: "miniapp.workfeed.ack",
   actionRun: "miniapp.workfeed.action.run",
-  // feedback records a correction/answer on a card (params {itemId, feedback});
-  // rewrite regenerates the card analysis (params {itemId}). Both are real
-  // gateway methods (chat miniapp bridge) — the old "answer" never existed.
-  feedback: "miniapp.workfeed.feedback",
-  rewrite: "miniapp.workfeed.rewrite",
+  answer: "miniapp.workfeed.answer",
 } as const;
 
 export const RESOURCE_MAP: Record<string, ResourceDef> = Object.fromEntries(RESOURCE_DEFS.map((r) => [r.name, r]));

@@ -301,13 +301,12 @@ function EventForm({
     const sum = summary.trim();
     if (!sum) return setStatus("제목을 입력하세요");
     if (!start) return setStatus("시작 시각을 입력하세요");
-    // Field shapes are best-effort vs the live gateway (DESIGN §5) — verify live.
     const payload: Record<string, unknown> = {
       summary: sum,
       allDay,
-      start: allDay ? start.slice(0, 10) : new Date(start).toISOString(),
+      start: localInputToRpcIso(start),
     };
-    if (end) payload.end = allDay ? end.slice(0, 10) : new Date(end).toISOString();
+    if (end) payload.end = localInputToRpcIso(end);
     if (location.trim()) payload.location = location.trim();
     if (description.trim()) payload.description = description.trim();
     setStatus("저장 중…");
@@ -414,4 +413,9 @@ function EventForm({
       </div>
     </>
   );
+}
+
+function localInputToRpcIso(value: string): string {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toISOString();
 }

@@ -107,9 +107,21 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
 
   "miniapp.workfeed.list": () => ({ count: fx.workfeed.length, items: fx.workfeed, total: fx.workfeed.length }),
   "miniapp.workfeed.ack": (p) => ({ ok: true, item: fx.workfeed.find((w) => String(w.id) === String(p.id)) ?? null }),
-  "miniapp.workfeed.action.run": () => ({ ok: true, removeFromFeed: true }),
-  "miniapp.workfeed.feedback": (p) => ({ ok: true, itemId: p.itemId, text: "정정 내용을 반영했습니다." }),
-  "miniapp.workfeed.rewrite": (p) => ({ ok: true, itemId: p.itemId, text: "카드를 다시 작성했습니다." }),
+  "miniapp.workfeed.action.run": (p) => ({
+    ok: true,
+    itemId: p.itemId,
+    actionId: p.actionId,
+    sessionKey: "client:main",
+    prompt: "작업피드 액션을 실행해줘.",
+    removeFromFeed: true,
+  }),
+  "miniapp.workfeed.answer": (p) => ({
+    ok: true,
+    itemId: p.itemId,
+    sessionKey: "client:main",
+    prompt: p.answer,
+    removeFromFeed: true,
+  }),
 
   // memory.search wraps hits as { results }; get_page/write_page carry the body
   // under `body` — mirror the real gateway (handlerminiapp/memory*.go) so the mock

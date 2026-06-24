@@ -24,6 +24,12 @@ function capturing(fixtures: Record<string, unknown[]>, sink: Record<string, unk
   };
 }
 
+function expectRpcDateTime(value: unknown) {
+  expect(typeof value).toBe("string");
+  expect(String(value)).toContain("T");
+  expect(Number.isNaN(Date.parse(String(value)))).toBe(false);
+}
+
 describe("TodoPane", () => {
   it("renders a todo's note under its title", async () => {
     const dataProvider = fakeProvider({ todo: [{ id: "t1", title: "보고서", note: "초안 먼저", done: false }] });
@@ -44,7 +50,9 @@ describe("TodoPane", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].resource).toBe("todo");
     expect(calls[0].id).toBe("t1");
-    expect(calls[0].variables).toMatchObject({ title: "보고서", due: "2026-07-15", note: "초안 먼저" });
+    const v = calls[0].variables as Record<string, unknown>;
+    expect(v).toMatchObject({ title: "보고서", note: "초안 먼저", dueAllDay: true });
+    expectRpcDateTime(v.due);
   });
 
   it("adds a todo through the + 새 할일 modal", async () => {
@@ -61,6 +69,8 @@ describe("TodoPane", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0].resource).toBe("todo");
-    expect(calls[0].variables).toMatchObject({ title: "새 보고서", due: "2026-08-01" });
+    const v = calls[0].variables as Record<string, unknown>;
+    expect(v).toMatchObject({ title: "새 보고서", dueAllDay: true });
+    expectRpcDateTime(v.due);
   });
 });

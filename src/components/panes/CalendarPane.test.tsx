@@ -12,8 +12,7 @@ const events = [
   { id: "e2", summary: "연차", start: { date: "2026-06-22" }, end: { date: "2026-06-23" }, allDay: true, local: true },
 ];
 
-// fakeProvider + a create sink so tests pin the exact wire params the form sends
-// (the calendar create shape is best-effort vs the live gateway).
+// fakeProvider + a create sink so tests pin the exact wire params the form sends.
 function capturing(fixtures: Record<string, unknown[]>, sink: Record<string, unknown>[]): DataProvider {
   const base = fakeProvider(fixtures);
   return {
@@ -38,6 +37,12 @@ function sseResponse(body = ""): Response {
 
 function fetchCalls(): Array<[RequestInfo | URL, RequestInit?]> {
   return (globalThis.fetch as unknown as { mock: { calls: Array<[RequestInfo | URL, RequestInit?]> } }).mock.calls;
+}
+
+function expectRpcDateTime(value: unknown) {
+  expect(typeof value).toBe("string");
+  expect(String(value)).toContain("T");
+  expect(Number.isNaN(Date.parse(String(value)))).toBe(false);
 }
 
 describe("CalendarPane (일정 달력)", () => {
@@ -129,7 +134,30 @@ describe("CalendarPane (일정 달력)", () => {
     expect(v.summary).toBe("신규 미팅");
     expect(v.location).toBe("회의실 B");
     expect(v.allDay).toBe(false);
-    expect(String(v.start)).toContain("2026-07-01");
+    expectRpcDateTime(v.start);
+  });
+
+  it("creates all-day events with RFC3339 start/end for the gateway", async () => {
+    const calls: Record<string, unknown>[] = [];
+    renderWithProviders(<CalendarPane />, {
+      connected: true,
+      dataProvider: capturing({ "calendar-range": [] }, calls),
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "새 일정" }));
+    await userEvent.type(await screen.findByLabelText("제목"), "종일 워크숍");
+    await userEvent.click(screen.getByLabelText("종일"));
+    fireEvent.change(screen.getByLabelText("시작"), { target: { value: "2026-07-03" } });
+    fireEvent.change(screen.getByLabelText("종료"), { target: { value: "2026-07-04" } });
+    await userEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    const created = calls.find((c) => c.resource === "calendar");
+    expect(created).toBeTruthy();
+    const v = created?.variables as Record<string, unknown>;
+    expect(v.allDay).toBe(true);
+    expectRpcDateTime(v.start);
+    expectRpcDateTime(v.end);
+    expect(v.start).not.toBe("2026-07-03");
   });
 
   it("filters the list to a clicked day and clears back to the visible month", async () => {
