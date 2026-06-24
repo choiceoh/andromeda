@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCreate, useInvalidate, useUpdate } from "@refinedev/core";
 
 import type { CalEvent } from "@/types";
@@ -13,7 +13,8 @@ import {
 } from "@/gateway";
 import { calSpan, calStamp, dayKey, errText, eventDayKeys, eventEndMs, eventTitle } from "@/format";
 import { useAction } from "@/useAction";
-import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { usePaneTarget } from "@/usePaneTarget";
+import { useRegisterPane, useWorkspace, type PaneTarget } from "@/workspaceContext";
 import { GridNotice, RowBtn } from "@/components/Grid";
 import { MonthGrid } from "@/components/MonthGrid";
 import { Detail, Field, Modal } from "@/components/Modal";
@@ -21,7 +22,7 @@ import { EventAnalysis } from "./EventAnalysis";
 import { parseDayKey, toLocalInput, visibleRangeForMonth } from "./calendarHelpers";
 
 export function CalendarPane() {
-  const { connected, cfg, consumePaneTarget, paneTarget } = useWorkspace();
+  const { connected, cfg } = useWorkspace();
   const now = new Date();
   const todayKey = dayKey(now);
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
@@ -93,21 +94,22 @@ export function CalendarPane() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, cfg.url, cfg.token]);
 
-  useEffect(() => {
-    if (paneTarget?.view !== "calendar") return;
-    const matchedEvent =
-      paneTarget.id !== undefined ? events.find((ev) => String(ev.id) === String(paneTarget.id)) : undefined;
-    const matchedKey = paneTarget.dayKey ?? (matchedEvent ? eventDayKeys(matchedEvent.start, matchedEvent.end)[0] : "");
-    const targetDate = parseDayKey(matchedKey);
-    if (matchedKey && targetDate) {
+  // Deep-link: focus the targeted day/event when another pane opens the calendar.
+  // Passing query.isLoading lets it wait for events to load so an id can match its
+  // event (and pick the event's day) before the target is consumed.
+  const applyTarget = useCallback(
+    (id: string | number | undefined, target: PaneTarget) => {
+      const matchedEvent = id !== undefined ? events.find((ev) => String(ev.id) === String(id)) : undefined;
+      const matchedKey = target.dayKey ?? (matchedEvent ? eventDayKeys(matchedEvent.start, matchedEvent.end)[0] : "");
+      const targetDate = parseDayKey(matchedKey);
+      if (!matchedKey || !targetDate) return;
       setCursor({ y: targetDate.getFullYear(), m: targetDate.getMonth() });
       setSelectedDay(matchedKey);
       setSelectedEventId(matchedEvent ? String(matchedEvent.id) : null);
-      consumePaneTarget();
-    } else if (!query.isLoading) {
-      consumePaneTarget();
-    }
-  }, [consumePaneTarget, events, paneTarget, query.isLoading]);
+    },
+    [events],
+  );
+  usePaneTarget("calendar", applyTarget, query.isLoading);
 
   // Place each event on every day it spans, so the month grid can look a day up.
   const eventsByDay = useMemo(() => {
