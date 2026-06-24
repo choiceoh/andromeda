@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.17](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.16...andromeda-v0.0.17) (2026-06-24)
+
+
+### Features
+
+* 위키 페이지 이동을 폴더 클릭 선택으로 변경 ([#123](https://github.com/choiceoh/andromeda/issues/123)) ([33a7198](https://github.com/choiceoh/andromeda/commit/33a7198376f3d08554924d22e41477db4f429cd3))
+
 ## [0.0.16](https://github.com/choiceoh/andromeda/compare/andromeda-v0.0.15...andromeda-v0.0.16) (2026-06-24)
 
 
