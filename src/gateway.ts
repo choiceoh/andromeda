@@ -194,6 +194,29 @@ export const sessionTranscript = (cfg: GatewayConfig, sessionKey: string, limit 
 export const deleteSession = (cfg: GatewayConfig, sessionKey: string) =>
   callRpc<{ deleted: boolean }>(cfg, "miniapp.sessions.delete", { sessionKey }).then((r) => Boolean(r.deleted));
 
+// --- Calendar proposals (miniapp.calendar.proposals.*) ---
+
+export interface CalendarProposal {
+  id: string;
+  title: string;
+  start: string;
+  allDay?: boolean;
+  kind?: string;
+  sourceSubject?: string;
+  sourceFrom?: string;
+}
+
+export const listCalendarProposals = (cfg: GatewayConfig) =>
+  callRpc<{ proposals?: CalendarProposal[] }>(cfg, "miniapp.calendar.proposals.list").then((r) => r.proposals ?? []);
+
+export const acceptCalendarProposal = (cfg: GatewayConfig, id: string) =>
+  callRpc<{ ok?: boolean; eventId?: string; proposal?: CalendarProposal }>(cfg, "miniapp.calendar.proposals.accept", {
+    id,
+  });
+
+export const rejectCalendarProposal = (cfg: GatewayConfig, id: string) =>
+  callRpc<{ ok?: boolean; proposal?: CalendarProposal }>(cfg, "miniapp.calendar.proposals.reject", { id });
+
 // --- Mail enrichment (miniapp.gmail.analyze / analysis_cached / sender_context / ask) ---
 
 // A related project wiki page surfaced by mail analysis. Mirrors gmail_analyze.go ProjectRef.

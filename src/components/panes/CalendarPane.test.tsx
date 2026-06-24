@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { DataProvider } from "@refinedev/core";
 import { CalendarPane } from "./CalendarPane";
@@ -11,6 +11,7 @@ const events = [
   { id: "e1", summary: "기획 리뷰", start: "2026-06-18T05:00:00Z", end: "2026-06-18T06:00:00Z" },
   { id: "e2", summary: "연차", start: { date: "2026-06-22" }, end: { date: "2026-06-23" }, allDay: true, local: true },
 ];
+let proposalRows: Array<Record<string, unknown>>;
 
 // fakeProvider + a create sink so tests pin the exact wire params the form sends.
 function capturing(fixtures: Record<string, unknown[]>, sink: Record<string, unknown>[]): DataProvider {
@@ -39,6 +40,15 @@ function fetchCalls(): Array<[RequestInfo | URL, RequestInit?]> {
   return (globalThis.fetch as unknown as { mock: { calls: Array<[RequestInfo | URL, RequestInit?]> } }).mock.calls;
 }
 
+function rpcCalls(): Array<{ method: string; params: Record<string, unknown> }> {
+  return fetchCalls()
+    .filter(([url]) => String(url).includes("/api/v1/miniapp/rpc"))
+    .map(([, init]) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { method?: string; params?: Record<string, unknown> };
+      return { method: String(body.method ?? ""), params: body.params ?? {} };
+    });
+}
+
 function expectRpcDateTime(value: unknown) {
   expect(typeof value).toBe("string");
   expect(String(value)).toContain("T");
@@ -50,13 +60,40 @@ describe("CalendarPane (일정 달력)", () => {
     // useCachedList persists to localStorage with a 60s staleTime; with Date frozen
     // the cache always reads "fresh", so clear it per test to fetch each fixture anew.
     localStorage.clear();
+    proposalRows = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        sseResponse(
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (String(url).includes("/api/v1/miniapp/rpc")) {
+          const body = JSON.parse(String(init?.body ?? "{}")) as { method?: string; params?: Record<string, unknown> };
+          const method = String(body.method ?? "");
+          const id = String(body.params?.id ?? "");
+          const proposal = proposalRows.find((p) => p.id === id);
+          if (method === "miniapp.calendar.proposals.list") {
+            return new Response(JSON.stringify({ ok: true, payload: { proposals: proposalRows } }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          if (method === "miniapp.calendar.proposals.accept" || method === "miniapp.calendar.proposals.reject") {
+            proposalRows = proposalRows.filter((p) => p.id !== id);
+            return new Response(
+              JSON.stringify({
+                ok: true,
+                payload: { ok: true, eventId: method.endsWith(".accept") ? `local:${id}` : undefined, proposal },
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          return new Response(JSON.stringify({ ok: true, payload: {} }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return sseResponse(
           'event: delta\ndata: {"delta":"AI가 채운 일정 분석입니다."}\n\nevent: done\ndata: {"text":"AI가 채운 일정 분석입니다."}\n\n',
-        ),
-      ),
+        );
+      }),
     );
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-06-15T09:00:00Z"));
@@ -190,6 +227,52 @@ describe("CalendarPane (일정 달력)", () => {
     });
     await userEvent.click(await screen.findByRole("button", { name: /6월 5일/ }));
     expect(screen.getByText("이 날 일정이 없습니다.")).toBeInTheDocument();
+  });
+
+  it("shows pending calendar proposals and accepts or rejects them", async () => {
+    proposalRows = [
+      {
+        id: "p1",
+        title: "분기 리뷰 확정",
+        start: "2026-06-23T05:00:00Z",
+        kind: "meeting",
+        sourceSubject: "분기 리뷰 일정 확정",
+        sourceFrom: "김리드",
+      },
+      {
+        id: "p2",
+        title: "입찰 마감",
+        start: "2026-06-25",
+        allDay: true,
+        kind: "deadline",
+        sourceSubject: "입찰 서류 제출",
+      },
+    ];
+    renderWithProviders(<CalendarPane />, {
+      connected: true,
+      dataProvider: fakeProvider({ "calendar-range": events }),
+    });
+
+    expect(await screen.findByRole("heading", { name: "일정 제안" })).toBeInTheDocument();
+    const review = screen.getByText("분기 리뷰 확정").closest(".cal-proposal") as HTMLElement;
+    await userEvent.click(within(review).getByRole("button", { name: "수락" }));
+
+    await screen.findByText("일정에 추가됨");
+    await waitFor(() => expect(rpcCalls().some((c) => c.method === "miniapp.calendar.proposals.accept")).toBe(true));
+    expect(rpcCalls().find((c) => c.method === "miniapp.calendar.proposals.accept")?.params).toMatchObject({
+      id: "p1",
+    });
+    expect(screen.queryByText("분기 리뷰 확정")).not.toBeInTheDocument();
+
+    const deadline = screen.getByText("입찰 마감").closest(".cal-proposal") as HTMLElement;
+    await userEvent.click(within(deadline).getByRole("button", { name: "거절" }));
+
+    await screen.findByText("제안 거절됨");
+    await waitFor(() => expect(rpcCalls().some((c) => c.method === "miniapp.calendar.proposals.reject")).toBe(true));
+    expect(rpcCalls().find((c) => c.method === "miniapp.calendar.proposals.reject")?.params).toMatchObject({
+      id: "p2",
+    });
+    expect(screen.queryByText("입찰 마감")).not.toBeInTheDocument();
   });
 
   it("opens a read-only detail for Google (non-local) events", async () => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fakeProvider, renderWithProviders } from "@/test/util";
 import { WorkfeedPane } from "./WorkfeedPane";
@@ -66,9 +66,11 @@ describe("WorkfeedPane", () => {
     });
     renderWithProviders(<WorkfeedPane />, { connected: true, dataProvider });
 
-    const box = await screen.findByPlaceholderText("답변 입력…");
+    await userEvent.click(await screen.findByText("검토 요청"));
+    const detail = screen.getByLabelText("작업피드 상세");
+    const box = within(detail).getByPlaceholderText("답변 입력…");
     await userEvent.type(box, "승인합니다");
-    await userEvent.click(screen.getByRole("button", { name: "답변" }));
+    await userEvent.click(within(detail).getByRole("button", { name: "답변" }));
 
     await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.answer")).toBe(true));
     const answer = rpcCalls.find((c) => c.method === "miniapp.workfeed.answer");
@@ -83,7 +85,11 @@ describe("WorkfeedPane", () => {
     });
     renderWithProviders(<WorkfeedPane />, { connected: true, dataProvider });
 
-    await userEvent.click(await screen.findByRole("button", { name: "답장" }));
+    expect(await screen.findByText("미답장 메일 3건")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "답장" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("미답장 메일 3건"));
+    const detail = screen.getByLabelText("작업피드 상세");
+    await userEvent.click(within(detail).getByRole("button", { name: "답장" }));
 
     await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.action.run")).toBe(true));
     const action = rpcCalls.find((c) => c.method === "miniapp.workfeed.action.run");
@@ -99,17 +105,38 @@ describe("WorkfeedPane", () => {
 
     expect(await screen.findByText("미답장 메일 3건")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("답변 입력…")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "다시 작성" }));
+    expect(screen.queryByRole("button", { name: "다시 작성" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("미답장 메일 3건"));
+    const detail = screen.getByLabelText("작업피드 상세");
+    await userEvent.click(within(detail).getByRole("button", { name: "다시 작성" }));
     await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.rewrite")).toBe(true));
     expect(rpcCalls.find((c) => c.method === "miniapp.workfeed.rewrite")?.params).toMatchObject({ itemId: "w2" });
 
-    await userEvent.type(screen.getByPlaceholderText("정정·피드백 입력…"), "이 메일은 이미 처리됐습니다");
-    await userEvent.click(screen.getByRole("button", { name: "정정" }));
+    await userEvent.type(within(detail).getByPlaceholderText("정정·피드백 입력…"), "이 메일은 이미 처리됐습니다");
+    await userEvent.click(within(detail).getByRole("button", { name: "정정" }));
 
     await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.feedback")).toBe(true));
     expect(rpcCalls.find((c) => c.method === "miniapp.workfeed.feedback")?.params).toMatchObject({
       itemId: "w2",
       feedback: "이 메일은 이미 처리됐습니다",
     });
+  });
+
+  it("opens and closes a detail panel, processing the selected item from there", async () => {
+    const dataProvider = fakeProvider({
+      workfeed: [{ id: "w3", source: "alert", title: "일정 충돌 감지", body: "오전 회의가 겹칩니다." }],
+    });
+    renderWithProviders(<WorkfeedPane />, { connected: true, dataProvider });
+
+    await userEvent.click(await screen.findByText("일정 충돌 감지"));
+    const detail = screen.getByLabelText("작업피드 상세");
+    expect(within(detail).getByText("오전 회의가 겹칩니다.")).toBeInTheDocument();
+
+    await userEvent.click(within(detail).getByRole("button", { name: "처리" }));
+
+    await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.workfeed.ack")).toBe(true));
+    expect(rpcCalls.find((c) => c.method === "miniapp.workfeed.ack")?.params).toMatchObject({ id: "w3" });
+    await waitFor(() => expect(screen.queryByLabelText("작업피드 상세")).not.toBeInTheDocument());
   });
 });

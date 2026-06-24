@@ -95,6 +95,16 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.calendar.create": (p) => ({ id: `e${Date.now()}`, local: true, ...p }),
   "miniapp.calendar.update": (p) => ({ ...p }),
   "miniapp.calendar.delete": () => ({ ok: true }),
+  "miniapp.calendar.proposals.list": () => ({ proposals: fx.calendarProposals }),
+  "miniapp.calendar.proposals.accept": (p) => ({
+    ok: true,
+    eventId: `local:${p.id}`,
+    proposal: fx.calendarProposals.find((proposal) => proposal.id === p.id) ?? null,
+  }),
+  "miniapp.calendar.proposals.reject": (p) => ({
+    ok: true,
+    proposal: fx.calendarProposals.find((proposal) => proposal.id === p.id) ?? null,
+  }),
 
   "miniapp.people.list": () => ({ people: fx.people, windowDays: 30, scannedCount: fx.people.length }),
 

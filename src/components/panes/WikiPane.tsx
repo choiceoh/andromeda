@@ -3,7 +3,7 @@ import { clearCachedResource } from "@/cachedList";
 import { MEMORY_RPC } from "@/resources";
 import type { WikiCategory, WikiDiaryEntry, WikiPage } from "@/types";
 import { useCachedRpc } from "@/useCachedRpc";
-import { color, line, muted } from "@/theme";
+import { color, muted } from "@/theme";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Field, Modal } from "@/components/Modal";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
@@ -33,11 +33,14 @@ export function WikiPane() {
   const [diary, setDiary] = useState<WikiDiaryEntry[]>([]);
   const [path, setPath] = useState<string | null>(null);
   const [content, setContent] = useState("");
+  const [savedContent, setSavedContent] = useState("");
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [moving, setMoving] = useState(false);
   const [merging, setMerging] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [preview, setPreview] = useState(false);
+  const dirty = Boolean(path && content !== savedContent);
 
   useRegisterPane(WIKI_RESOURCE, content.trim() ? `[위키${path ? ` ${path}` : ""}]\n${content}` : "");
 
@@ -50,7 +53,7 @@ export function WikiPane() {
   // 인물 카드 / 검색 결과에서 넘어온 위키 경로를 열고 채널을 비운다.
   useEffect(() => {
     if (!connected || !wikiTarget) return;
-    void openPath(wikiTarget);
+    requestOpenPath(wikiTarget);
     consumeWikiTarget();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wikiTarget, connected]);
@@ -132,6 +135,15 @@ export function WikiPane() {
     if (r.ok && r.applied) setStatus((r.data?.entries ?? []).length ? "" : "최근 일지 없음");
   }
 
+  function requestOpenPath(key: string) {
+    if (!key) return;
+    if (dirty && key !== path) {
+      setPendingPath(key);
+      return;
+    }
+    void openPath(key);
+  }
+
   async function openPath(key: string) {
     if (!key) return;
     const r = await callCached<WikiPageResponse>(
@@ -147,17 +159,48 @@ export function WikiPane() {
   }
 
   function applyPage(key: string, page: WikiPageResponse) {
+    const body = typeof page === "string" ? page : (page?.body ?? page?.content ?? "");
     setPath(key);
-    setContent(typeof page === "string" ? page : (page?.body ?? page?.content ?? ""));
+    setContent(body);
+    setSavedContent(body);
+    setPreview(false);
+  }
+
+  function editContent(next: string) {
+    setContent(next);
+    if (status === "저장됨") setStatus("");
+  }
+
+  async function saveCurrent(): Promise<boolean> {
+    if (!path) return false;
+    const currentPath = path;
+    const body = content;
+    const r = await call(MEMORY_RPC.writePage, { path: currentPath, body }, "저장 중...");
+    if (!r.ok) return false;
+    setSavedContent(body);
+    clearCachedResource(WIKI_RESOURCE);
+    writeCache<WikiPageResponse>(MEMORY_RPC.getPage, { path: currentPath }, { body });
+    setStatus("");
+    return true;
   }
 
   async function save() {
-    if (!path) return;
-    const r = await call(MEMORY_RPC.writePage, { path, body: content }, "저장 중...");
-    if (!r.ok) return;
-    clearCachedResource(WIKI_RESOURCE);
-    writeCache<WikiPageResponse>(MEMORY_RPC.getPage, { path }, { body: content });
-    setStatus("저장됨");
+    await saveCurrent();
+  }
+
+  async function saveThenOpenPending() {
+    const target = pendingPath;
+    if (!target) return;
+    const ok = await saveCurrent();
+    if (!ok) return;
+    setPendingPath(null);
+    await openPath(target);
+  }
+
+  function discardThenOpenPending() {
+    const target = pendingPath;
+    setPendingPath(null);
+    if (target) void openPath(target);
   }
 
   async function createNewPage(draft: NewPageDraft) {
@@ -216,6 +259,7 @@ export function WikiPane() {
     setDeleting(false);
     setPath(null);
     setContent("");
+    setSavedContent("");
     setCatPages((rows) => rows.filter((p) => keyOf(p) !== current));
     setPages((rows) => rows.filter((p) => keyOf(p) !== current));
     await loadCategories();
@@ -225,7 +269,7 @@ export function WikiPane() {
   const renderPage = (p: WikiPage) => (
     <button
       key={keyOf(p) || (p.title ?? "")}
-      onClick={() => void openPath(keyOf(p))}
+      onClick={() => requestOpenPath(keyOf(p))}
       className="wiki-list-row"
       style={{ background: keyOf(p) === path ? color.active : "transparent" }}
     >
@@ -235,8 +279,8 @@ export function WikiPane() {
   );
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 12, height: "100%" }}>
-      <div style={{ borderRight: line, paddingRight: 12, overflow: "auto" }}>
+    <div className="wiki-shell">
+      <div className="wiki-rail">
         <input
           className="field"
           style={{ width: "100%", boxSizing: "border-box", fontSize: 12, marginBottom: 8 }}
@@ -252,7 +296,8 @@ export function WikiPane() {
           <button
             className="btn"
             onClick={() => setCreating(true)}
-            disabled={!connected}
+            disabled={!connected || dirty}
+            title={dirty ? "먼저 저장하거나 되돌리세요" : "새 페이지"}
             style={{ fontSize: 12, padding: "6px 0" }}
           >
             새 페이지
@@ -287,7 +332,7 @@ export function WikiPane() {
                 <button
                   key={entry.file ?? entry.path ?? i}
                   className="wiki-list-row"
-                  onClick={() => void openPath(entry.file ?? entry.path ?? "")}
+                  onClick={() => requestOpenPath(entry.file ?? entry.path ?? "")}
                 >
                   <span>{entry.header ?? entry.title ?? entry.file ?? entry.path ?? "일지"}</span>
                   {entry.content && <small>{entry.content}</small>}
@@ -323,46 +368,57 @@ export function WikiPane() {
           })
         )}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, minWidth: 0 }}>
-          <h3 style={{ margin: 0, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
-            {path ?? "위키"}
-          </h3>
-          <button
-            className="btn"
-            onClick={() => setPreview((p) => !p)}
-            disabled={!path}
-            style={{ padding: "5px 12px", fontSize: 12 }}
-          >
-            {preview ? "편집" : "미리보기"}
-          </button>
-          <button
-            className="btn btn-accent"
-            onClick={() => void save()}
-            disabled={!path}
-            style={{ padding: "5px 12px", fontSize: 12 }}
-          >
-            저장
-          </button>
-          <button className="row-btn" onClick={() => setMoving(true)} disabled={!path}>
-            이동
-          </button>
-          <button className="row-btn" onClick={() => setMerging(true)} disabled={!path}>
-            병합
-          </button>
-          <button
-            className="row-btn"
-            onClick={() => setDeleting(true)}
-            disabled={!path}
-            style={{ color: color.danger }}
-          >
-            삭제
-          </button>
-          {status && <span className="pane-status">{status}</span>}
+      <div className="wiki-editor">
+        <div className="wiki-editor-head">
+          <div className="wiki-title-line">
+            <h3>{path ?? "위키"}</h3>
+            {path && <span className={"wiki-save-state" + (dirty ? " dirty" : "")}>{dirty ? "수정됨" : "저장됨"}</span>}
+          </div>
+          <div className="wiki-mode-tabs" role="group" aria-label="위키 보기 방식">
+            <button
+              className={"wiki-mode-tab" + (!preview ? " active" : "")}
+              onClick={() => setPreview(false)}
+              disabled={!path}
+              aria-pressed={!preview}
+            >
+              편집
+            </button>
+            <button
+              className={"wiki-mode-tab" + (preview ? " active" : "")}
+              onClick={() => setPreview(true)}
+              disabled={!path}
+              aria-pressed={preview}
+            >
+              미리보기
+            </button>
+          </div>
+          <div className="wiki-editor-actions">
+            <button className="btn btn-accent" onClick={() => void save()} disabled={!path || !dirty}>
+              저장
+            </button>
+            <button className="row-btn" onClick={() => editContent(savedContent)} disabled={!dirty}>
+              되돌리기
+            </button>
+            <button className="row-btn" onClick={() => setMoving(true)} disabled={!path || dirty}>
+              이동
+            </button>
+            <button className="row-btn" onClick={() => setMerging(true)} disabled={!path || dirty}>
+              병합
+            </button>
+            <button
+              className="row-btn"
+              onClick={() => setDeleting(true)}
+              disabled={!path || dirty}
+              style={{ color: color.danger }}
+            >
+              삭제
+            </button>
+            {status && <span className="pane-status">{status}</span>}
+          </div>
         </div>
         <MarkdownEditor
           value={content}
-          onChange={setContent}
+          onChange={editContent}
           preview={preview}
           disabled={!path}
           fill
@@ -395,6 +451,15 @@ export function WikiPane() {
           path={path}
           onClose={() => setDeleting(false)}
           onDelete={() => void deletePage()}
+        />
+      )}
+      {pendingPath && (
+        <UnsavedWikiModal
+          path={path ?? ""}
+          targetPath={pendingPath}
+          onClose={() => setPendingPath(null)}
+          onDiscard={discardThenOpenPending}
+          onSave={() => void saveThenOpenPending()}
         />
       )}
     </div>
@@ -480,6 +545,45 @@ function NewPageModal({ onClose, onCreate }: { onClose: () => void; onCreate: (d
           style={{ resize: "vertical" }}
         />
       </Field>
+    </Modal>
+  );
+}
+
+function UnsavedWikiModal({
+  path,
+  targetPath,
+  onClose,
+  onDiscard,
+  onSave,
+}: {
+  path: string;
+  targetPath: string;
+  onClose: () => void;
+  onDiscard: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <Modal
+      title="저장하지 않은 변경"
+      onClose={onClose}
+      width={460}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            계속 편집
+          </button>
+          <button className="btn" onClick={onDiscard}>
+            버리고 열기
+          </button>
+          <button className="btn btn-accent" onClick={onSave}>
+            저장 후 열기
+          </button>
+        </>
+      }
+    >
+      <p style={{ ...muted, margin: 0 }}>
+        {path}에 저장하지 않은 변경이 있습니다. {targetPath}을 열기 전에 처리하세요.
+      </p>
     </Modal>
   );
 }
