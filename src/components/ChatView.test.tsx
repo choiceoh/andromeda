@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { ChatView } from "./ChatView";
 import { renderWithProviders } from "@/test/util";
@@ -44,5 +45,51 @@ describe("ChatView (비업무 채팅 탭)", () => {
   it("offers a file-attach button (image OCR · document · audio)", () => {
     renderWithProviders(<ChatView cfg={{ url: "http://test", token: "tok" }} />, { connected: true });
     expect(screen.getByRole("button", { name: "파일 첨부" })).toBeInTheDocument();
+  });
+
+  it("sends the typed composer text as the image attachment caption", async () => {
+    const rpcCalls: Array<{ method: string; params: Record<string, unknown> }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+          params?: Record<string, unknown>;
+        };
+        const method = String(body.method ?? "");
+        const params = body.params ?? {};
+        rpcCalls.push({ method, params });
+        const payload =
+          method === "miniapp.models.list"
+            ? { current: "", sections: [] }
+            : method === "miniapp.sessions.recent"
+              ? { sessions: [], count: 0 }
+              : method === "miniapp.capture.image"
+                ? { text: "분석 완료" }
+                : {};
+        return new Response(JSON.stringify({ ok: true, payload }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    renderWithProviders(<ChatView cfg={{ url: "http://test", token: "tok" }} />, { connected: true });
+    const user = userEvent.setup();
+    const composer = screen.getByRole("textbox", { name: "Deneb에게 메시지" });
+    await user.type(composer, "이 이미지에서 금액만 찾아줘");
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, new File(["fake image"], "quote.png", { type: "image/png" }));
+
+    await waitFor(() => expect(rpcCalls.some((c) => c.method === "miniapp.capture.image")).toBe(true));
+    const capture = rpcCalls.find((c) => c.method === "miniapp.capture.image");
+    expect(capture?.params).toMatchObject({
+      mimeType: "image/png",
+      sessionKey: "chat:main",
+      caption: "이 이미지에서 금액만 찾아줘",
+    });
+    expect(typeof capture?.params.image).toBe("string");
+    expect(composer).toHaveValue("");
+    expect(await screen.findByText("분석 완료")).toBeInTheDocument();
   });
 });

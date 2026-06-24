@@ -40,6 +40,7 @@ export interface SendOpts {
   activeResource?: string;
   model?: string;
   sessionKey?: string;
+  caption?: string;
 }
 
 export interface ChatState {
@@ -205,8 +206,10 @@ export function useChat(cfg: GatewayConfig): ChatState {
       : file.mimeType.startsWith("audio/")
         ? "audio"
         : "document";
-    const label =
+    const caption = opts.caption?.trim();
+    const baseLabel =
       kind === "image" ? `📷 이미지 — ${file.name}` : kind === "audio" ? `🎙️ 녹음 — ${file.name}` : `📄 ${file.name}`;
+    const label = caption && kind !== "audio" ? `${baseLabel}\n${caption}` : baseLabel;
     const assistantId = chatTurnId();
     setThinking("");
     setTurns((prev) => [
@@ -224,9 +227,12 @@ export function useChat(cfg: GatewayConfig): ChatState {
         sessionKey: opts.sessionKey,
       };
       if (kind === "document") params.filename = file.name;
+      if (caption && kind !== "audio") params.caption = caption;
       const res = await callRpc<{ text?: string }>(cfg, `miniapp.capture.${kind}`, params);
       const text = res?.text?.trim() || "첨부에서 내용을 추출하지 못했거나 분석에 실패했습니다.";
       patch((turn) => ({ ...turn, parts: [{ kind: "text", text }], text, status: "done" }));
+      for (const resource of ["workfeed", "wiki", "search"]) clearCachedResource(resource);
+      invalidate({ resource: "workfeed", invalidates: ["list"] });
     } catch (e) {
       const line = `[오류] ${(e as Error)?.message ?? "첨부 실패"}`;
       patch((turn) => ({ ...turn, parts: [{ kind: "text", text: line }], text: line, status: "error" }));

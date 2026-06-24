@@ -89,11 +89,15 @@ export function ChatView({ cfg, hidden = false }: { cfg: GatewayConfig; hidden?:
     const file = e.target.files?.[0];
     e.target.value = ""; // let the same file be picked again later
     if (!file || busy || !connected) return;
+    const caption = file.type.startsWith("audio/") ? "" : input.trim();
+    if (caption) setInput("");
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = String(reader.result).split(",")[1] ?? "";
       pin();
-      void capture({ name: file.name, mimeType: file.type, base64 }, { sessionKey }).then(() => void refreshSessions());
+      void capture({ name: file.name, mimeType: file.type, base64 }, { sessionKey, caption }).then(
+        () => void refreshSessions(),
+      );
     };
     reader.readAsDataURL(file);
   }
