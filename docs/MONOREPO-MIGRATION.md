@@ -75,7 +75,7 @@ Deneb는 이미 release-please **v5** + `.release-please-config.json` + `.releas
 
 1. **복수 엔드포인트**: 이관 빌드의 `updater.endpoints`에 **둘 다** 나열 —
    `["https://github.com/choiceoh/Deneb/releases/latest/download/latest.json",
-  "https://github.com/choiceoh/andromeda/releases/latest/download/latest.json"]`.
+"https://github.com/choiceoh/andromeda/releases/latest/download/latest.json"]`.
    (Tauri updater는 복수 엔드포인트를 순서대로 시도.)
 2. **전환기 이중 게시**: Deneb 릴리즈 워크플로가 전환기 동안 **andromeda 레포 릴리즈에도
    `latest.json`(+번들 또는 Deneb 자산을 가리키는 latest.json)을 계속 게시** → andromeda
