@@ -32,4 +32,17 @@ describe("mock gateway handlers", () => {
     const files = await callRpc<{ entries: { name: string }[] }>(cfg, "miniapp.files.list", { path: "" });
     expect(files.entries.some((entry) => entry.name === "projects")).toBe(true);
   });
+
+  it("answers notebook list, detail, and delete RPCs", async () => {
+    const list = await callRpc<{ notebooks: { id: string; name: string }[] }>(cfg, "miniapp.notebook.list");
+    expect(list.notebooks[0]).toMatchObject({ id: "nb1", name: "탑솔라 2차 계약" });
+
+    const detail = await callRpc<{ sources?: { title?: string }[] }>(cfg, "miniapp.notebook.get", { id: "nb1" });
+    expect(detail.sources?.[0]).toMatchObject({ title: "잔금 안내" });
+
+    await expect(callRpc(cfg, "miniapp.notebook.delete", { id: "nb1" })).resolves.toMatchObject({
+      deleted: true,
+      id: "nb1",
+    });
+  });
 });
