@@ -84,7 +84,8 @@ describe("AssistantText", () => {
   it("renders an embedded deneb-ui block as interactive UI alongside markdown", () => {
     const text =
       '**요약**\n\n```deneb-ui\n{"type":"button","label":"승인","action":{"type":"callback","event":"approve"}}\n```';
-    render(<AssistantText text={text} onUiSubmit={() => {}} />);
+    const { container } = render(<AssistantText text={text} onUiSubmit={() => {}} />);
+    expect(container.querySelector(".assistant-text")).toBeInTheDocument();
     expect(screen.getByText("요약").tagName).toBe("STRONG"); // markdown span
     expect(screen.getByRole("button", { name: "승인" })).toBeInTheDocument(); // drawn UI
   });
