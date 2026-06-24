@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/util";
 import { NotebookPane } from "./NotebookPane";
@@ -9,10 +9,12 @@ import { NotebookPane } from "./NotebookPane";
 // write round-trip (create → add_source → get) shows up in the UI.
 let added: { cite: string; kind: string; title: string; text: string; ref: string }[];
 let createdName: string;
+let notebookRows: { id: string; name: string; sourceCount: number; updated: number }[];
 
 beforeEach(() => {
   added = [];
   createdName = "";
+  notebookRows = [{ id: "ztt", name: "ZTT", sourceCount: 1, updated: 1782190313958 }];
   localStorage.clear();
   if (!globalThis.crypto?.randomUUID) {
     vi.stubGlobal("crypto", { randomUUID: () => "test-uuid" });
@@ -28,10 +30,14 @@ beforeEach(() => {
         ({ ok: true, json: async () => ({ ok: true, payload }) }) as unknown as Response;
       switch (method) {
         case "miniapp.notebook.list":
-          return reply({ notebooks: [{ id: "ztt", name: "ZTT", sourceCount: 1, updated: 1782190313958 }] });
+          return reply({ notebooks: notebookRows });
         case "miniapp.notebook.create":
           createdName = String(params.name);
+          notebookRows = [{ id: "nb-new", name: createdName, sourceCount: 0, updated: 2 }, ...notebookRows];
           return reply({ id: "nb-new", name: createdName, sourceCount: 0, updated: 2 });
+        case "miniapp.notebook.delete":
+          notebookRows = notebookRows.filter((notebook) => notebook.id !== params.id);
+          return reply({ deleted: true, id: params.id });
         case "miniapp.notebook.add_source": {
           const s = {
             cite: `S${added.length + 1}`,
@@ -106,5 +112,19 @@ describe("NotebookPane", () => {
     // add_source carried kind=wiki + ref (a wiki page), not a pasted note.
     expect(added.at(-1)).toMatchObject({ kind: "wiki", ref: "프로젝트/topsolar.md", title: "탑솔라" });
     expect(await screen.findByText("탑솔라")).toBeInTheDocument();
+  });
+
+  it("deletes the open notebook after confirmation", async () => {
+    renderWithProviders(<NotebookPane />, { connected: true });
+
+    await userEvent.click(await screen.findByRole("button", { name: /ZTT/ }));
+    expect(await screen.findByRole("heading", { name: "ZTT" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "노트북 삭제" }));
+    expect(screen.getByRole("dialog", { name: "노트북 삭제" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "삭제" }));
+
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "ZTT" })).not.toBeInTheDocument());
+    expect(await screen.findByText(/노트북이 없습니다/)).toBeInTheDocument();
   });
 });

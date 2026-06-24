@@ -115,6 +115,12 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.crons.run": () => ({ enqueued: true }),
   "miniapp.crons.remove": () => ({ removed: true }),
 
+  "miniapp.notebook.list": () => ({ notebooks: fx.notebooks }),
+  "miniapp.notebook.get": (p) => fx.notebookDetails[String(p.id)] ?? null,
+  "miniapp.notebook.create": (p) => ({ id: `nb${Date.now()}`, name: p.name, description: p.description }),
+  "miniapp.notebook.delete": (p) => ({ deleted: true, id: p.id }),
+  "miniapp.notebook.add_source": (p) => ({ cite: "S2", ...p }),
+
   "miniapp.workfeed.list": () => ({ count: fx.workfeed.length, items: fx.workfeed, total: fx.workfeed.length }),
   "miniapp.workfeed.ack": (p) => ({ ok: true, item: fx.workfeed.find((w) => String(w.id) === String(p.id)) ?? null }),
   "miniapp.workfeed.action.run": (p) => ({

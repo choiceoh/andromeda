@@ -9,6 +9,7 @@ import { useRegisterPane, useWorkspace } from "@/workspaceContext";
 import { Icon } from "@/components/Icon";
 import { Field, Modal, ModalFooter } from "@/components/Modal";
 import { Markdown } from "@/components/Markdown";
+import { DeleteModal } from "./commonModals";
 
 // Notebook (노트북) — a browser over Deneb's deal notebooks (miniapp.notebook.*).
 // Each notebook is a 거래 with cited source materials; opening one feeds its
@@ -22,6 +23,7 @@ export function NotebookPane() {
   const [active, setActive] = useState<Notebook | null>(null);
   const [creating, setCreating] = useState(false);
   const [addingSource, setAddingSource] = useState(false);
+  const [deleting, setDeleting] = useState<Notebook | null>(null);
 
   // Reload the list and refresh its cache — used after create/add_source so the
   // left rail (and the cached snapshot it paints from) stays current.
@@ -79,6 +81,17 @@ export function NotebookPane() {
     setAddingSource(false);
     await openNotebook(active.id); // reload to show the new source
     void loadNotebooks(); // refresh the list's source count
+  }
+
+  async function deleteNotebook() {
+    if (!deleting) return;
+    const id = deleting.id;
+    const r = await call<{ deleted?: boolean; id?: string }>(NOTEBOOK_RPC.delete, { id }, "삭제 중…");
+    if (!r.ok) return;
+    setDeleting(null);
+    setActive((current) => (current?.id === id ? null : current));
+    await loadNotebooks();
+    setNotebooks((current) => current.filter((notebook) => notebook.id !== id));
   }
 
   // Project the open notebook's sources (or the list) to the AI — ask Deneb about
@@ -171,6 +184,21 @@ export function NotebookPane() {
               >
                 <Icon name="plus" size={12} /> 인용자료
               </button>
+              <button
+                className="row-btn"
+                onClick={() => setDeleting(active)}
+                aria-label="노트북 삭제"
+                title="노트북 삭제"
+                style={{
+                  padding: "3px 8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 3,
+                  color: color.danger,
+                }}
+              >
+                <Icon name="trash" size={12} /> 삭제
+              </button>
               {active.dealRef && (
                 <button
                   className="row-btn"
@@ -210,6 +238,14 @@ export function NotebookPane() {
           notebook={active.name}
           onClose={() => setAddingSource(false)}
           onAdd={(src) => void addSource(src)}
+        />
+      )}
+      {deleting && (
+        <DeleteModal
+          title="노트북 삭제"
+          path={deleting.name}
+          onClose={() => setDeleting(null)}
+          onDelete={() => void deleteNotebook()}
         />
       )}
     </div>

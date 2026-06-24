@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RESOURCE_DEFS, RESOURCE_MAP, refineResources, resourceDef } from "./resources";
+import { NOTEBOOK_RPC, RESOURCE_DEFS, RESOURCE_MAP, refineResources, resourceDef } from "./resources";
 
 describe("resource registry", () => {
   it("maps every def by name", () => {
@@ -36,5 +36,15 @@ describe("resource registry", () => {
     for (const name of ["people", "crons", "workfeed"]) {
       expect(resourceDef(name).list).toMatch(/^miniapp\./);
     }
+  });
+
+  it("wires notebook create, delete, and source pin RPCs", () => {
+    expect(NOTEBOOK_RPC).toMatchObject({
+      list: "miniapp.notebook.list",
+      get: "miniapp.notebook.get",
+      create: "miniapp.notebook.create",
+      delete: "miniapp.notebook.delete",
+      addSource: "miniapp.notebook.add_source",
+    });
   });
 });

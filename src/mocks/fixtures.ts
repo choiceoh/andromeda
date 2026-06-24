@@ -8,6 +8,8 @@ import type {
   Cron,
   FileEntry,
   Mail,
+  Notebook,
+  NotebookSummary,
   Person,
   ProjectDigest,
   SearchHit,
@@ -147,6 +149,17 @@ export const crons: Cron[] = [
     lastError: "타임아웃: 응답이 10초를 초과했습니다",
   },
 ];
+
+export const notebooks: NotebookSummary[] = [
+  { id: "nb1", name: "탑솔라 2차 계약", dealRef: "projects/topsolar", sourceCount: 1, updated: 1782190313958 },
+];
+
+export const notebookDetails: Record<string, Notebook> = {
+  nb1: {
+    ...notebooks[0],
+    sources: [{ cite: "S1", kind: "note", title: "잔금 안내", text: "최종 5% 잔금 $401K, 마감 6/25." }],
+  },
+};
 
 export const workfeed: WorkItem[] = [
   {
