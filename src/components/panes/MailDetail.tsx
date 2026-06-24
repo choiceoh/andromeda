@@ -4,20 +4,12 @@
 // grounded Q&A box. The enrichment cards each own their fetch/loading/error state
 // and degrade silently on an older gateway that lacks the method.
 import { useEffect, useState } from "react";
-import {
-  type MailAnalysis,
-  type QATurn,
-  type SenderContext,
-  analyzeMail,
-  askMail,
-  cachedMailAnalysis,
-  mailAttachmentUrl,
-  senderContext,
-} from "@/gateway";
+import { type QATurn, analyzeMail, askMail, cachedMailAnalysis, mailAttachmentUrl, senderContext } from "@/gateway";
 import type { Mail, MailAttachment } from "@/types";
 import { errText, firstString, fmtMailDate, senderName, text } from "@/format";
 import { stripMailChrome } from "@/mailChrome";
 import { formatBytes } from "@/components/panes/fileHelpers";
+import { useAsyncOnOpen } from "@/useAsyncOnOpen";
 import { useWorkspace } from "@/workspaceContext";
 import { Markdown } from "@/components/Markdown";
 
@@ -180,19 +172,9 @@ function formatAttachmentMeta(att: MailAttachment): string {
 // pages about this person/company. Renders nothing until something useful loads.
 function SenderCard({ sender }: { sender: string }) {
   const { cfg, connected, openWiki } = useWorkspace();
-  const [data, setData] = useState<SenderContext | null>(null);
-
-  useEffect(() => {
-    if (!connected || !sender.trim()) return;
-    let cancelled = false;
-    setData(null);
-    senderContext(cfg, sender)
-      .then((r) => !cancelled && setData(r))
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [cfg, connected, sender]);
+  const [data] = useAsyncOnOpen(() => senderContext(cfg, sender), [cfg, sender], {
+    enabled: connected && !!sender.trim(),
+  });
 
   const recent = data?.recent;
   const hits = data?.wikiHits ?? [];
@@ -225,22 +207,16 @@ function SenderCard({ sender }: { sender: string }) {
 // AI analysis: load any cached result on open; otherwise offer an analyze button.
 function AnalysisCard({ mailId }: { mailId: string }) {
   const { cfg, connected, openWiki } = useWorkspace();
-  const [data, setData] = useState<MailAnalysis | null>(null);
+  // Load any cached analysis on open (a miss / older gateway just leaves data null,
+  // so we fall through to the analyze button). `setData` is reused by the manual run.
+  const [data, setData] = useAsyncOnOpen(() => cachedMailAnalysis(cfg, mailId), [cfg, mailId], {
+    enabled: connected,
+  });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  useEffect(() => {
-    if (!connected) return;
-    let cancelled = false;
-    setData(null);
-    setErr("");
-    cachedMailAnalysis(cfg, mailId)
-      .then((r) => !cancelled && setData(r))
-      .catch(() => {}); // a miss / older gateway → just offer the analyze button
-    return () => {
-      cancelled = true;
-    };
-  }, [cfg, connected, mailId]);
+  // Drop a stale manual-analysis error when switching messages.
+  useEffect(() => setErr(""), [mailId]);
 
   async function run(force = false) {
     setLoading(true);
