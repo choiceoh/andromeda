@@ -171,9 +171,8 @@ export interface SearchHit {
   snippet?: string;
 }
 
-// Notebook (노트북) — read-only deal collections (miniapp.notebook.list/get). Each
-// notebook is a 거래 with cited source materials; opening one feeds its sources to
-// the AI panel for grounded Q&A (NotebookLM-style).
+// Notebook (노트북) — deal collections with cited source materials; opening one
+// feeds its sources to the AI panel for grounded Q&A (NotebookLM-style).
 export interface NotebookSummary {
   id: string;
   name: string;

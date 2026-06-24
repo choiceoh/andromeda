@@ -1,13 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCreate, useInvalidate, useUpdate } from "@refinedev/core";
 
 import type { CalEvent } from "@/types";
 import { serializeList } from "@/aiText";
 import { useCachedList } from "@/cachedList";
-import { type GatewayConfig } from "@/gateway";
+import {
+  type CalendarProposal,
+  type GatewayConfig,
+  acceptCalendarProposal,
+  listCalendarProposals,
+  rejectCalendarProposal,
+} from "@/gateway";
 import { calSpan, calStamp, dayKey, errText, eventDayKeys, eventEndMs, eventTitle } from "@/format";
 import { useAction } from "@/useAction";
-import { useRegisterPane, useWorkspace } from "@/workspaceContext";
+import { usePaneTarget } from "@/usePaneTarget";
+import { useRegisterPane, useWorkspace, type PaneTarget } from "@/workspaceContext";
 import { GridNotice, RowBtn } from "@/components/Grid";
 import { MonthGrid } from "@/components/MonthGrid";
 import { Detail, Field, Modal } from "@/components/Modal";
@@ -15,7 +22,7 @@ import { EventAnalysis } from "./EventAnalysis";
 import { parseDayKey, toLocalInput, visibleRangeForMonth } from "./calendarHelpers";
 
 export function CalendarPane() {
-  const { connected, cfg, consumePaneTarget, paneTarget } = useWorkspace();
+  const { connected, cfg } = useWorkspace();
   const now = new Date();
   const todayKey = dayKey(now);
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
@@ -40,26 +47,69 @@ export function CalendarPane() {
   const { run, error, busy } = useAction(refreshCalendarData);
   const [creating, setCreating] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [proposals, setProposals] = useState<CalendarProposal[]>([]);
+  const [proposalStatus, setProposalStatus] = useState("");
+  const [proposalBusyId, setProposalBusyId] = useState<string | null>(null);
   const selectedEvent = useMemo(
     () => events.find((ev) => String(ev.id) === selectedEventId) ?? null,
     [events, selectedEventId],
   );
 
+  async function refreshProposals() {
+    if (!connected) {
+      setProposals([]);
+      return;
+    }
+    try {
+      setProposals(await listCalendarProposals(cfg));
+    } catch {
+      // Older or partially-wired gateways simply don't show the proposal tray.
+      setProposals([]);
+    }
+  }
+
+  async function decideProposal(p: CalendarProposal, decision: "accept" | "reject") {
+    setProposalBusyId(p.id);
+    setProposalStatus(decision === "accept" ? "일정에 추가하는 중…" : "제안을 거절하는 중…");
+    try {
+      if (decision === "accept") {
+        await acceptCalendarProposal(cfg, p.id);
+        setProposalStatus("일정에 추가됨");
+        refreshCalendarData();
+      } else {
+        await rejectCalendarProposal(cfg, p.id);
+        setProposalStatus("제안 거절됨");
+      }
+      setProposals((rows) => rows.filter((row) => row.id !== p.id));
+      void refreshProposals();
+    } catch (err) {
+      setProposalStatus(`오류: ${errText(err)}`);
+    } finally {
+      setProposalBusyId(null);
+    }
+  }
+
   useEffect(() => {
-    if (paneTarget?.view !== "calendar") return;
-    const matchedEvent =
-      paneTarget.id !== undefined ? events.find((ev) => String(ev.id) === String(paneTarget.id)) : undefined;
-    const matchedKey = paneTarget.dayKey ?? (matchedEvent ? eventDayKeys(matchedEvent.start, matchedEvent.end)[0] : "");
-    const targetDate = parseDayKey(matchedKey);
-    if (matchedKey && targetDate) {
+    void refreshProposals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, cfg.url, cfg.token]);
+
+  // Deep-link: focus the targeted day/event when another pane opens the calendar.
+  // Passing query.isLoading lets it wait for events to load so an id can match its
+  // event (and pick the event's day) before the target is consumed.
+  const applyTarget = useCallback(
+    (id: string | number | undefined, target: PaneTarget) => {
+      const matchedEvent = id !== undefined ? events.find((ev) => String(ev.id) === String(id)) : undefined;
+      const matchedKey = target.dayKey ?? (matchedEvent ? eventDayKeys(matchedEvent.start, matchedEvent.end)[0] : "");
+      const targetDate = parseDayKey(matchedKey);
+      if (!matchedKey || !targetDate) return;
       setCursor({ y: targetDate.getFullYear(), m: targetDate.getMonth() });
       setSelectedDay(matchedKey);
       setSelectedEventId(matchedEvent ? String(matchedEvent.id) : null);
-      consumePaneTarget();
-    } else if (!query.isLoading) {
-      consumePaneTarget();
-    }
-  }, [consumePaneTarget, events, paneTarget, query.isLoading]);
+    },
+    [events],
+  );
+  usePaneTarget("calendar", applyTarget, query.isLoading);
 
   // Place each event on every day it spans, so the month grid can look a day up.
   const eventsByDay = useMemo(() => {
@@ -74,10 +124,17 @@ export function CalendarPane() {
     return map;
   }, [events]);
 
-  const aiText = serializeList("일정", events, (ev) => {
+  const calendarText = serializeList("일정", events, (ev) => {
     const span = calSpan(ev.start, ev.end);
     return `- ${eventTitle(ev)}${span ? ` (${span})` : ""}${ev.location ? ` @${ev.location}` : ""}`;
   });
+  const proposalText = serializeList(
+    "일정 제안",
+    proposals,
+    (p) =>
+      `- ${p.title}${p.start ? ` (${formatProposalStart(p)})` : ""}${p.sourceSubject ? ` · ${p.sourceSubject}` : ""}`,
+  );
+  const aiText = [calendarText, proposalText].filter(Boolean).join("\n\n");
   useRegisterPane("calendar-range", aiText);
 
   // Category → agenda dot tint, mirroring the month-grid markers.
@@ -149,6 +206,13 @@ export function CalendarPane() {
         )}
 
         <div className="cal-agenda-col">
+          <CalendarProposalTray
+            proposals={proposals}
+            status={proposalStatus}
+            busyId={proposalBusyId}
+            onAccept={(p) => void decideProposal(p, "accept")}
+            onReject={(p) => void decideProposal(p, "reject")}
+          />
           {connected && (
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
               <h3 style={{ margin: 0, color: "var(--muted)" }}>{listLabel}</h3>
@@ -233,6 +297,76 @@ export function CalendarPane() {
       {creating && <EventModal onClose={() => setCreating(false)} onSaved={refreshCalendarData} />}
     </>
   );
+}
+
+function CalendarProposalTray({
+  proposals,
+  status,
+  busyId,
+  onAccept,
+  onReject,
+}: {
+  proposals: CalendarProposal[];
+  status: string;
+  busyId: string | null;
+  onAccept: (proposal: CalendarProposal) => void;
+  onReject: (proposal: CalendarProposal) => void;
+}) {
+  if (proposals.length === 0 && !status) return null;
+
+  return (
+    <section className="cal-proposals" aria-label="일정 제안">
+      <div className="cal-proposals-head">
+        <h3>일정 제안</h3>
+        {proposals.length > 0 && <span>{proposals.length}</span>}
+      </div>
+      {proposals.length > 0 && (
+        <div className="cal-proposal-list">
+          {proposals.map((p) => {
+            const busy = busyId === p.id;
+            return (
+              <div key={p.id} className="cal-proposal">
+                <div className="cal-proposal-body">
+                  <div className="cal-proposal-title">{p.title || "(제목 없음)"}</div>
+                  <div className="cal-proposal-meta">
+                    {[proposalKindLabel(p.kind), formatProposalStart(p), p.sourceFrom, p.sourceSubject]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                </div>
+                <div className="cal-proposal-actions">
+                  <button className="row-btn" onClick={() => onReject(p)} disabled={Boolean(busyId)}>
+                    거절
+                  </button>
+                  <button
+                    className="row-btn"
+                    onClick={() => onAccept(p)}
+                    disabled={Boolean(busyId)}
+                    title="일정에 추가"
+                  >
+                    {busy ? "처리 중" : "수락"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {status && <div className="pane-status cal-proposal-status">{status}</div>}
+    </section>
+  );
+}
+
+function proposalKindLabel(kind?: string): string {
+  if (kind === "deadline") return "마감";
+  if (kind === "meeting") return "회의";
+  return "";
+}
+
+function formatProposalStart(p: CalendarProposal): string {
+  if (!p.start) return "";
+  if (p.allDay || /^\d{4}-\d{2}-\d{2}$/.test(p.start)) return p.start;
+  return calSpan(p.start, undefined);
 }
 
 function SelectedEventWorkspace({

@@ -8,7 +8,7 @@ import { readJsonSSE } from "./sse";
 import { log } from "./log";
 import { getJSON, setJSON } from "./storage";
 import { isTauri } from "./tauri";
-import type { MailAttachment } from "./types";
+import type { MailAttachment, PromptDetailOut, PromptListResponse, PromptRow } from "./types";
 
 const rpcLog = log.child("rpc");
 const chatLog = log.child("chat");
@@ -154,6 +154,20 @@ export const listModels = (cfg: GatewayConfig) => callRpc<ModelsList>(cfg, "mini
 export const setModel = (cfg: GatewayConfig, id: string, role = "main") =>
   callRpc<{ ok: boolean; role: string; current: string }>(cfg, "miniapp.models.set", { id, role });
 
+// --- Prompt templates (miniapp.prompts.*) ---
+
+export const listPrompts = (cfg: GatewayConfig): Promise<PromptRow[]> =>
+  callRpc<PromptListResponse>(cfg, "miniapp.prompts.list").then((r) => r.prompts ?? []);
+
+export const getPrompt = (cfg: GatewayConfig, id: string) =>
+  callRpc<PromptDetailOut>(cfg, "miniapp.prompts.get", { id });
+
+export const updatePrompt = (cfg: GatewayConfig, id: string, text: string) =>
+  callRpc<PromptDetailOut>(cfg, "miniapp.prompts.update", { id, text });
+
+export const resetPrompt = (cfg: GatewayConfig, id: string) =>
+  callRpc<PromptDetailOut>(cfg, "miniapp.prompts.reset", { id });
+
 // --- Sessions (miniapp.sessions.*) — conversation history drawer ---
 
 // One recent conversation row. Mirrors handlerminiapp.sessionRowOut (sessions.go).
@@ -193,6 +207,29 @@ export const sessionTranscript = (cfg: GatewayConfig, sessionKey: string, limit 
 // deletes its transcript so the row can't resurrect on the next restart.
 export const deleteSession = (cfg: GatewayConfig, sessionKey: string) =>
   callRpc<{ deleted: boolean }>(cfg, "miniapp.sessions.delete", { sessionKey }).then((r) => Boolean(r.deleted));
+
+// --- Calendar proposals (miniapp.calendar.proposals.*) ---
+
+export interface CalendarProposal {
+  id: string;
+  title: string;
+  start: string;
+  allDay?: boolean;
+  kind?: string;
+  sourceSubject?: string;
+  sourceFrom?: string;
+}
+
+export const listCalendarProposals = (cfg: GatewayConfig) =>
+  callRpc<{ proposals?: CalendarProposal[] }>(cfg, "miniapp.calendar.proposals.list").then((r) => r.proposals ?? []);
+
+export const acceptCalendarProposal = (cfg: GatewayConfig, id: string) =>
+  callRpc<{ ok?: boolean; eventId?: string; proposal?: CalendarProposal }>(cfg, "miniapp.calendar.proposals.accept", {
+    id,
+  });
+
+export const rejectCalendarProposal = (cfg: GatewayConfig, id: string) =>
+  callRpc<{ ok?: boolean; proposal?: CalendarProposal }>(cfg, "miniapp.calendar.proposals.reject", { id });
 
 // --- Mail enrichment (miniapp.gmail.analyze / analysis_cached / sender_context / ask) ---
 

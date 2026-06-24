@@ -95,6 +95,16 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.calendar.create": (p) => ({ id: `e${Date.now()}`, local: true, ...p }),
   "miniapp.calendar.update": (p) => ({ ...p }),
   "miniapp.calendar.delete": () => ({ ok: true }),
+  "miniapp.calendar.proposals.list": () => ({ proposals: fx.calendarProposals }),
+  "miniapp.calendar.proposals.accept": (p) => ({
+    ok: true,
+    eventId: `local:${p.id}`,
+    proposal: fx.calendarProposals.find((proposal) => proposal.id === p.id) ?? null,
+  }),
+  "miniapp.calendar.proposals.reject": (p) => ({
+    ok: true,
+    proposal: fx.calendarProposals.find((proposal) => proposal.id === p.id) ?? null,
+  }),
 
   "miniapp.people.list": () => ({ people: fx.people, windowDays: 30, scannedCount: fx.people.length }),
 
@@ -104,6 +114,25 @@ const RPC: Record<string, (p: Record<string, any>) => unknown> = {
   "miniapp.crons.update": (p) => ({ ...p }),
   "miniapp.crons.run": () => ({ enqueued: true }),
   "miniapp.crons.remove": () => ({ removed: true }),
+
+  "miniapp.notebook.list": () => ({ notebooks: fx.notebooks }),
+  "miniapp.notebook.get": (p) => fx.notebookDetails[String(p.id)] ?? null,
+  "miniapp.notebook.create": (p) => ({ id: `nb${Date.now()}`, name: p.name, description: p.description }),
+  "miniapp.notebook.delete": (p) => ({ deleted: true, id: p.id }),
+  "miniapp.notebook.add_source": (p) => ({ cite: "S2", ...p }),
+
+  "miniapp.prompts.list": () => ({ prompts: fx.prompts, count: fx.prompts.length }),
+  "miniapp.prompts.get": (p) => fx.promptDetails[String(p.id)] ?? null,
+  "miniapp.prompts.update": (p) => {
+    const id = String(p.id);
+    const base = fx.promptDetails[id] ?? { id, title: id, defaultText: "" };
+    return { ...base, text: String(p.text ?? ""), overridden: true, updatedAtMs: Date.now() };
+  },
+  "miniapp.prompts.reset": (p) => {
+    const id = String(p.id);
+    const base = fx.promptDetails[id] ?? { id, title: id, defaultText: "" };
+    return { ...base, text: String(base.defaultText ?? ""), overridden: false, updatedAtMs: Date.now() };
+  },
 
   "miniapp.workfeed.list": () => ({ count: fx.workfeed.length, items: fx.workfeed, total: fx.workfeed.length }),
   "miniapp.workfeed.ack": (p) => ({ ok: true, item: fx.workfeed.find((w) => String(w.id) === String(p.id)) ?? null }),

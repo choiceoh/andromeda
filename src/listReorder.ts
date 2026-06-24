@@ -14,3 +14,12 @@ export function moveItem<T>(items: T[], item: T, dir: -1 | 1): T[] {
   [next[i], next[j]] = [next[j], next[i]];
   return next;
 }
+
+// Merge a user's `saved` order with the `catalog` of valid items: keep the saved
+// order for items still in the catalog, then append any catalog items missing
+// from it (in catalog order). New catalog items surface; removed ones drop. Used
+// for both the nav rail (orderedViews) and the 오늘 dashboard sections.
+export function orderedItems<T>(saved: readonly T[], catalog: readonly T[]): T[] {
+  const inSaved = saved.filter((k) => catalog.includes(k));
+  return [...inSaved, ...catalog.filter((k) => !inSaved.includes(k))];
+}

@@ -20,7 +20,7 @@ export function TodoPane() {
 
   // Deep-link: open the matching todo's edit modal when another pane targets it.
   const openTargetedTodo = useCallback(
-    (id: string | number) => {
+    (id: string | number | undefined) => {
       const match = todos.find((t) => String(t.id) === String(id));
       if (match) setModal(match);
     },
