@@ -449,7 +449,7 @@ export function AssistantText({
 }) {
   const segments = splitDenebUi(text);
   return (
-    <>
+    <div className="assistant-text">
       {segments.map((seg, i) => {
         if (seg.kind === "md") return <Markdown key={i} text={seg.text} />;
         if (seg.kind === "ui-pending")
@@ -467,6 +467,6 @@ export function AssistantText({
           </pre>
         );
       })}
-    </>
+    </div>
   );
 }
