@@ -132,9 +132,7 @@ export function ChatView({ cfg, hidden = false }: { cfg: GatewayConfig; hidden?:
             <div className="chat-greeting">
               <DenebStar size={40} />
               <p>{connected ? "안녕하세요? 무슨 대화를 할까요?" : "게이트웨이 연결 대기 중"}</p>
-              {connected && (
-                <span className="chat-greeting-sub">무엇이든 편하게 물어보세요 · 파일을 첨부해도 좋아요</span>
-              )}
+              {connected && <span className="chat-greeting-sub">무엇이든 편하게 물어보세요</span>}
             </div>
           ) : (
             turns.map((turn) => (
