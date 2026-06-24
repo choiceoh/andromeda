@@ -4,6 +4,7 @@
 // all follow automatically.
 import type { ComponentType } from "react";
 import type { View } from "@/types";
+import { orderedItems } from "@/listReorder";
 import { ProgressPane } from "./ProgressPane";
 import { TodoPane } from "./TodoPane";
 import { NotebookPane } from "./NotebookPane";
@@ -54,6 +55,5 @@ export const paneLabel = (key: View): string => PANES.find((p) => p.key === key)
 // removed ones drop). Settings is excluded — it's pinned to the bottom of the rail.
 export function orderedViews(saved: View[]): View[] {
   const keys = PANES.filter((p) => p.key !== "settings").map((p) => p.key);
-  const inSaved = saved.filter((v) => keys.includes(v));
-  return [...inSaved, ...keys.filter((k) => !inSaved.includes(k))];
+  return orderedItems(saved, keys);
 }

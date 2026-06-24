@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { moveItem } from "./listReorder";
+import { moveItem, orderedItems } from "./listReorder";
 
 describe("moveItem", () => {
   it("swaps an item with its neighbour in the given direction", () => {
@@ -21,5 +21,19 @@ describe("moveItem", () => {
     const input = ["a", "b", "c"];
     moveItem(input, "b", 1);
     expect(input).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("orderedItems", () => {
+  it("keeps the saved order, then appends catalog items missing from it", () => {
+    expect(orderedItems(["b", "a"], ["a", "b", "c"])).toEqual(["b", "a", "c"]);
+  });
+
+  it("drops saved items no longer in the catalog", () => {
+    expect(orderedItems(["x", "b"], ["a", "b", "c"])).toEqual(["b", "a", "c"]);
+  });
+
+  it("returns the catalog order when nothing is saved", () => {
+    expect(orderedItems([], ["a", "b", "c"])).toEqual(["a", "b", "c"]);
   });
 });

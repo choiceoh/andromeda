@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { CalEvent, Cron, Mail, Person, ProjectDigest, Todo, View, WorkItem } from "@/types";
 import { useCachedList } from "@/cachedList";
 import { calSpan, eventDayKeys, fmtDate, senderName } from "@/format";
-import { moveItem } from "@/listReorder";
+import { moveItem, orderedItems } from "@/listReorder";
 import { getJSON, setJSON } from "@/storage";
 import { Icon, type IconName } from "@/components/Icon";
 import { GridNotice } from "@/components/Grid";
@@ -43,8 +43,7 @@ function validKeys(raw: unknown): SectionKey[] {
 }
 // Saved order, with any new/missing sections appended in catalog order.
 function readOrder(): SectionKey[] {
-  const saved = validKeys(getJSON<unknown[]>(TODAY_ORDER_KEY));
-  return [...saved, ...SECTIONS.filter((k) => !saved.includes(k))];
+  return orderedItems(validKeys(getJSON<unknown[]>(TODAY_ORDER_KEY)), SECTIONS);
 }
 function readHidden(): SectionKey[] {
   const savedOrder = validKeys(getJSON<unknown[]>(TODAY_ORDER_KEY));
