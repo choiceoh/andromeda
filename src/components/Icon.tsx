@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 export type IconName =
   | "today"
   | "chat"
+  | "attach"
   | "progress"
   | "todo"
   | "notebook"
@@ -41,6 +42,9 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   chat: (
     <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3v-3H5A1.5 1.5 0 0 1 3.5 15V7A1.5 1.5 0 0 1 5 5.5z" />
+  ),
+  attach: (
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 0 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
   ),
   todo: (
     <>

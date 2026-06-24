@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useInvalidate } from "@refinedev/core";
 import { clearCachedResource } from "./cachedList";
-import { type ChatToolEvent, type GatewayConfig, chatStream, ping } from "./gateway";
+import { type ChatToolEvent, type GatewayConfig, callRpc, chatStream, ping } from "./gateway";
 import { type ProactiveEvent, subscribeEvents } from "./events";
 import { relatedResourcesForResource, relatedResourcesForTools } from "./resourceRefresh";
 import { appendTextPart, chatTurnId, upsertToolPart } from "./chatParts";
@@ -47,6 +47,7 @@ export interface ChatState {
   busy: boolean;
   turns: ChatTurn[];
   send: (message: string, opts?: SendOpts) => Promise<void>;
+  capture: (file: { name: string; mimeType: string; base64: string }, opts?: SendOpts) => Promise<void>;
   stop: () => void;
   regenerate: () => void;
   clear: () => void;
@@ -193,7 +194,48 @@ export function useChat(cfg: GatewayConfig): ChatState {
     }
   }
 
-  return { thinking, busy, turns, send, stop, regenerate, clear, setTurns };
+  // Attach a file to the chat: OCR an image, transcribe audio, or extract a document
+  // via the gateway's miniapp.capture.* RPCs — each runs one agent turn over the
+  // extracted text and lands in this session. Non-streaming (the RPC returns the
+  // final text), so it appends a user label and fills the assistant reply.
+  async function capture(file: { name: string; mimeType: string; base64: string }, opts: SendOpts = {}) {
+    if (busy || !file.base64) return;
+    const kind = file.mimeType.startsWith("image/")
+      ? "image"
+      : file.mimeType.startsWith("audio/")
+        ? "audio"
+        : "document";
+    const label =
+      kind === "image" ? `📷 이미지 — ${file.name}` : kind === "audio" ? `🎙️ 녹음 — ${file.name}` : `📄 ${file.name}`;
+    const assistantId = chatTurnId();
+    setThinking("");
+    setTurns((prev) => [
+      ...prev,
+      { id: chatTurnId(), role: "user", text: label, status: "done" },
+      { id: assistantId, role: "assistant", text: "", parts: [], status: "streaming", model: opts.model },
+    ]);
+    setBusy(true);
+    const patch = (update: (turn: ChatTurn) => ChatTurn) =>
+      setTurns((prev) => prev.map((turn) => (turn.id === assistantId ? update(turn) : turn)));
+    try {
+      const params: Record<string, unknown> = {
+        [kind]: file.base64,
+        mimeType: file.mimeType,
+        sessionKey: opts.sessionKey,
+      };
+      if (kind === "document") params.filename = file.name;
+      const res = await callRpc<{ text?: string }>(cfg, `miniapp.capture.${kind}`, params);
+      const text = res?.text?.trim() || "첨부에서 내용을 추출하지 못했거나 분석에 실패했습니다.";
+      patch((turn) => ({ ...turn, parts: [{ kind: "text", text }], text, status: "done" }));
+    } catch (e) {
+      const line = `[오류] ${(e as Error)?.message ?? "첨부 실패"}`;
+      patch((turn) => ({ ...turn, parts: [{ kind: "text", text: line }], text: line, status: "error" }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return { thinking, busy, turns, send, capture, stop, regenerate, clear, setTurns };
 }
 
 export interface GatewayStatus {
