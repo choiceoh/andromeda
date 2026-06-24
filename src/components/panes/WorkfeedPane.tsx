@@ -8,7 +8,7 @@ import { fmtDate } from "@/format";
 import { usePaneTarget } from "@/usePaneTarget";
 import { useAction } from "@/useAction";
 import { useRegisterPane, useWorkspace } from "@/workspaceContext";
-import { Column, Grid, GridNotice, RowBtn } from "@/components/Grid";
+import { Column, Grid, GridNotice } from "@/components/Grid";
 
 // Items sourced from a question expect a free-text reply. The gateway settles the
 // card via workfeed.answer/action.run, then returns a sessionKey+prompt to deliver.
@@ -56,6 +56,15 @@ export function WorkfeedPane() {
   );
   useRegisterPane("workfeed", aiText);
 
+  function toggleSelected(w: WorkItem) {
+    setSelectedId((current) => (String(current) === String(w.id) ? undefined : w.id));
+  }
+
+  async function ackItem(w: WorkItem) {
+    const result = await run(WORKFEED_RPC.ack, { id: w.id });
+    if (result !== undefined) setSelectedId(undefined);
+  }
+
   const columns: Column<WorkItem>[] = [
     {
       header: "출처",
@@ -69,7 +78,6 @@ export function WorkfeedPane() {
         <>
           <div style={{ fontWeight: 500 }}>{w.title ?? "(항목)"}</div>
           {w.body && <div style={{ fontSize: 12, color: "var(--muted-2)", lineHeight: 1.45 }}>{w.body}</div>}
-          <WorkItemActions w={w} busy={busy} run={run} />
         </>
       ),
     },
@@ -78,16 +86,6 @@ export function WorkfeedPane() {
       width: 120,
       tdStyle: { fontSize: 13, opacity: 0.7, whiteSpace: "nowrap" },
       cell: (w) => fmtDate(w.createdAtMs),
-    },
-    {
-      header: "",
-      width: 60,
-      tdStyle: { textAlign: "right" },
-      cell: (w) => (
-        <RowBtn onClick={() => void run(WORKFEED_RPC.ack, { id: w.id })} disabled={busy} title="처리(닫기)">
-          처리
-        </RowBtn>
-      ),
     },
   ];
 
@@ -100,20 +98,43 @@ export function WorkfeedPane() {
           columns={columns}
           rows={items}
           getKey={(w) => String(w.id)}
+          onRowClick={toggleSelected}
           isRowSelected={(w) => String(w.id) === String(selectedId)}
+          rowTitle={(w) => `${w.title ?? "(항목)"} 상세`}
+          renderExpandedRow={(w) => (
+            <WorkItemDetail
+              w={w}
+              busy={busy}
+              run={run}
+              onAck={() => void ackItem(w)}
+              onClose={() => setSelectedId(undefined)}
+            />
+          )}
         />
       </GridNotice>
     </>
   );
 }
 
-// Per-item actions mirror the gateway: fixed chips go through action.run, question
-// cards expose workfeed.answer, and every card can be corrected or regenerated.
-function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: RunFn }) {
+// Selected-item detail. The row remains scan-only; all mutating actions live here.
+function WorkItemDetail({
+  w,
+  busy,
+  run,
+  onAck,
+  onClose,
+}: {
+  w: WorkItem;
+  busy: boolean;
+  run: RunFn;
+  onAck: () => void;
+  onClose: () => void;
+}) {
   const question = isQuestion(w);
   const [text, setText] = useState("");
   const [feedback, setFeedback] = useState("");
   const hasActions = (w.actions?.length ?? 0) > 0;
+  const created = fmtDate(w.createdAtMs);
 
   const submit = () => {
     const t = text.trim();
@@ -130,65 +151,82 @@ function WorkItemActions({ w, busy, run }: { w: WorkItem; busy: boolean; run: Ru
   };
 
   return (
-    <>
+    <section className="workfeed-detail" aria-label="작업피드 상세">
+      <div className="workfeed-detail-head">
+        <div>
+          <div className="workfeed-detail-title">{w.title ?? "(항목)"}</div>
+          <div className="workfeed-detail-meta">
+            {[w.source, created, w.refId ? `ref ${w.refId}` : ""].filter(Boolean).join(" · ")}
+          </div>
+        </div>
+        <div className="workfeed-detail-actions">
+          <button className="row-btn" onClick={onClose} disabled={busy}>
+            닫기
+          </button>
+          <button className="btn" onClick={() => void run(WORKFEED_RPC.rewrite, { itemId: w.id })} disabled={busy}>
+            다시 작성
+          </button>
+          <button className="btn btn-accent" onClick={onAck} disabled={busy}>
+            처리
+          </button>
+        </div>
+      </div>
+      {w.body && <div className="workfeed-detail-body">{w.body}</div>}
       {hasActions && (
-        <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
-          {w.actions?.map((a) => (
-            <button
-              key={a.id}
-              className="chip"
-              disabled={busy}
-              onClick={() => void run(WORKFEED_RPC.actionRun, { itemId: w.id, actionId: a.id })}
-            >
-              {a.label}
-            </button>
-          ))}
+        <div className="workfeed-card">
+          <div className="workfeed-card-title">액션</div>
+          <div className="workfeed-chips">
+            {w.actions?.map((a) => (
+              <button
+                key={a.id}
+                className="chip"
+                disabled={busy}
+                onClick={() => void run(WORKFEED_RPC.actionRun, { itemId: w.id, actionId: a.id })}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {question && (
-        <div style={{ display: "flex", gap: 5, marginTop: 6, maxWidth: 460 }}>
-          <input
-            className="field"
-            style={{ flex: 1, fontSize: 12, padding: "5px 8px" }}
-            placeholder="답변 입력…"
-            value={text}
-            disabled={busy}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submit();
-            }}
-          />
-          <button className="chip" onClick={submit} disabled={busy || !text.trim()}>
-            답변
-          </button>
+        <div className="workfeed-card">
+          <div className="workfeed-card-title">답변</div>
+          <div className="workfeed-form">
+            <input
+              className="field"
+              placeholder="답변 입력…"
+              value={text}
+              disabled={busy}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+            />
+            <button className="chip" onClick={submit} disabled={busy || !text.trim()}>
+              답변
+            </button>
+          </div>
         </div>
       )}
-      <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
-        <button
-          className="chip"
-          disabled={busy}
-          onClick={() => void run(WORKFEED_RPC.rewrite, { itemId: w.id })}
-          title="카드 분석 다시 작성"
-        >
-          다시 작성
-        </button>
+      <div className="workfeed-card">
+        <div className="workfeed-card-title">정정</div>
+        <div className="workfeed-form">
+          <input
+            className="field"
+            placeholder="정정·피드백 입력…"
+            value={feedback}
+            disabled={busy}
+            onChange={(e) => setFeedback(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitFeedback();
+            }}
+          />
+          <button className="chip" onClick={submitFeedback} disabled={busy || !feedback.trim()}>
+            정정
+          </button>
+        </div>
       </div>
-      <div style={{ display: "flex", gap: 5, marginTop: 6, maxWidth: 520 }}>
-        <input
-          className="field"
-          style={{ flex: 1, fontSize: 12, padding: "5px 8px" }}
-          placeholder="정정·피드백 입력…"
-          value={feedback}
-          disabled={busy}
-          onChange={(e) => setFeedback(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") submitFeedback();
-          }}
-        />
-        <button className="chip" onClick={submitFeedback} disabled={busy || !feedback.trim()}>
-          정정
-        </button>
-      </div>
-    </>
+    </section>
   );
 }

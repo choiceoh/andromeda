@@ -2,7 +2,7 @@
 // stay honest as the types evolve. Field names mirror the gateway WIRE contract
 // (isUnread, due, nextRunAtMs, workfeed body/source/createdAtMs, …) — they're what
 // an agent (or a screenshot) sees when running against the mock.
-import type { ModelsList, SessionRow, TranscriptMsg } from "@/gateway";
+import type { CalendarProposal, ModelsList, SessionRow, TranscriptMsg } from "@/gateway";
 import type {
   CalEvent,
   Cron,
@@ -67,6 +67,17 @@ export const events: CalEvent[] = [
     start: { date: "2026-06-22" },
     end: { date: "2026-06-23" },
     allDay: true,
+  },
+];
+
+export const calendarProposals: CalendarProposal[] = [
+  {
+    id: "cp1",
+    title: "분기 리뷰 확정",
+    start: "2026-06-23T05:00:00Z",
+    kind: "meeting",
+    sourceSubject: "분기 리뷰 일정 확정",
+    sourceFrom: "김리드",
   },
 ];
 
